@@ -524,7 +524,8 @@ const SmartphoneUPI: React.FC<Props> = ({
     );
   }
 
-  const isLimitExceeded = amount && (Number(amount) > 500 || (userWallet.balance + Number(amount) > 500));
+  // Strictly cast to boolean to avoid TS2322 (Type 'boolean | ""' is not assignable to type 'boolean | undefined')
+  const isLimitExceeded = Boolean(amount && (Number(amount) > 500 || (userWallet.balance + Number(amount) > 500)));
 
   return (
     <div className={`${frameClasses} mx-auto`}>
