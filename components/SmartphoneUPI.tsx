@@ -33,10 +33,15 @@ const SmartphoneUPI: React.FC<Props> = ({
   const [amount, setAmount] = useState<string>('');
   const [showFullHistory, setShowFullHistory] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const [showAI, setShowAI] = useState(false);
   const [time, setTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }));
   const [chartType, setChartType] = useState<ChartType>('Area');
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  // Profile States
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [isLinked, setIsLinked] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -376,6 +381,110 @@ const SmartphoneUPI: React.FC<Props> = ({
     );
   }
 
+  // User Profile View Overlay
+  if (showProfile) {
+    return (
+      <div className={`${frameClasses} animate-in slide-in-from-left duration-300 mx-auto`}>
+        <div className="hidden sm:block absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-950 rounded-b-2xl z-20"></div>
+        <div className="mt-8 flex items-center gap-4 mb-10 shrink-0">
+           <button onClick={() => { haptics.lightClick(); setShowProfile(false); }} className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors">
+             <i className="fas fa-chevron-left text-slate-300"></i>
+           </button>
+           <h2 className="text-xl font-bold">User Profile</h2>
+        </div>
+
+        <div className="flex-1 space-y-10 overflow-y-auto scrollbar-hidden">
+           {/* Avatar and Info Section */}
+           <div className="flex flex-col items-center">
+              <div className="relative">
+                <div className="w-28 h-28 rounded-full bg-slate-800 border-4 border-slate-700 flex items-center justify-center overflow-hidden shadow-2xl">
+                  {isLinked ? (
+                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${phoneNumber}`} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <i className="fas fa-user text-5xl text-slate-600"></i>
+                  )}
+                </div>
+                {isLinked && (
+                  <div className="absolute bottom-1 right-1 w-8 h-8 bg-indigo-500 rounded-full border-4 border-slate-900 flex items-center justify-center animate-in zoom-in">
+                    <i className="fas fa-check text-white text-[10px]"></i>
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 text-center">
+                <h3 className="text-lg font-black text-white">{isLinked ? 'Verified Account' : 'Guest Account'}</h3>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">ZiPPaY Micro-Pay Wallet</p>
+              </div>
+           </div>
+
+           {/* Form Section */}
+           <div className="space-y-6">
+              <div className="space-y-3">
+                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Enter Phone Number</label>
+                 <div className="relative group">
+                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm tracking-tight border-r border-slate-800 pr-3">+91</div>
+                    <input 
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        setPhoneNumber(val);
+                      }}
+                      placeholder="00000 00000"
+                      className="w-full bg-slate-950 border border-slate-800 group-hover:border-slate-700 rounded-2xl py-4 pl-16 pr-5 text-sm font-black focus:outline-none focus:border-indigo-600 transition-all text-white placeholder:text-slate-800 tracking-widest"
+                    />
+                 </div>
+              </div>
+
+              <button 
+                onClick={() => {
+                  if (phoneNumber.length === 10) {
+                     haptics.successPulse();
+                     setIsLinked(true);
+                  }
+                }}
+                disabled={phoneNumber.length !== 10}
+                className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-[0.25em] transition-all shadow-xl flex items-center justify-center gap-3 ${phoneNumber.length === 10 ? 'bg-indigo-600 text-white hover:bg-indigo-500 active:scale-95' : 'bg-slate-800 text-slate-700 cursor-not-allowed'}`}
+              >
+                <i className={`fas ${isLinked ? 'fa-sync' : 'fa-link'}`}></i>
+                {isLinked ? 'Update Link' : 'Link Bank Account'}
+              </button>
+
+              {isLinked && (
+                <div className="bg-slate-800/40 border border-slate-800/60 rounded-[2rem] p-6 space-y-4 animate-in slide-in-from-bottom-4 duration-500">
+                   <div className="flex items-center justify-between pb-4 border-b border-slate-800/50">
+                      <div className="flex items-center gap-3">
+                         <div className="w-10 h-10 rounded-xl bg-indigo-600/10 flex items-center justify-center text-indigo-400">
+                            <i className="fas fa-university"></i>
+                         </div>
+                         <div>
+                            <p className="text-[11px] font-black text-white">HDFC BANK LTD</p>
+                            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Savings •••• 8829</p>
+                         </div>
+                      </div>
+                      <span className="text-[8px] font-black bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full uppercase">Active</span>
+                   </div>
+                   <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-500">
+                         <i className="fas fa-qrcode"></i>
+                      </div>
+                      <div>
+                         <p className="text-[11px] font-black text-white">UPI VPA</p>
+                         <p className="text-[9px] text-slate-500 font-bold lowercase tracking-tighter">{phoneNumber}@zippay</p>
+                      </div>
+                   </div>
+                </div>
+              )}
+           </div>
+        </div>
+
+        {/* Home Indicator Pillar */}
+        <div className="mt-auto py-2 shrink-0 border-t border-slate-800/30 bg-slate-900/50 backdrop-blur-sm -mx-8 px-8">
+           <div className="w-16 h-1.5 bg-slate-800/50 rounded-full mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`${frameClasses} mx-auto`}>
       {showAI && <AIAssistant state={fullState} onClose={() => setShowAI(false)} />}
@@ -406,9 +515,16 @@ const SmartphoneUPI: React.FC<Props> = ({
           >
             <i className="fas fa-robot"></i>
           </button>
-          <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-700">
-            <i className="fas fa-user text-slate-500"></i>
-          </div>
+          <button 
+            onClick={() => { haptics.mediumClick(); setShowProfile(true); }}
+            className={`w-10 h-10 rounded-full flex items-center justify-center overflow-hidden border transition-all ${isLinked ? 'border-indigo-500 bg-indigo-500/10' : 'border-slate-700 bg-slate-800 hover:border-slate-500'}`}
+          >
+            {isLinked ? (
+              <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${phoneNumber}`} alt="User" className="w-full h-full object-cover" />
+            ) : (
+              <i className="fas fa-user text-slate-500"></i>
+            )}
+          </button>
         </div>
       </div>
 
