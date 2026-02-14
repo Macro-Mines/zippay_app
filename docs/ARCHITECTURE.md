@@ -21,20 +21,20 @@ The state is unified in the project root to simulate a real-time local network:
 ### A. Funding the Wallet (Load)
 - **Condition**: Requires Bluetooth (Phone -> Watch) AND Wi-Fi (Phone -> Bank).
 - **Logic**: Deducts from `phoneBalance` and adds to `userWallet.balance`.
+- **Validation**: Rejects amounts > ₹500 or loads that take the total balance over ₹500. Provides real-time red-border feedback.
 
-### B. The Offline Payment
+### B. Transaction Management (Sorting)
+- **Logic**: Implemented using `useMemo` hooks for performance.
+- **Sort Types**: `date-desc` (Newest), `date-asc` (Oldest), `amt-desc` (Highest), `amt-asc` (Lowest).
+- **UI**: Context-aware sort bars in history views on both watch and phone.
+
+### C. The Offline Payment
 - **Condition**: Watch must be `ACTIVE`.
 - **Limit Check**: Watch allows 5 transactions (`offlineCount`) before requiring a sync.
 
-### C. Visual Analytics Engine
-- **Engine**: Custom SVG-based rendering for 6 chart types.
+### D. Visual Analytics Engine
+- **Engine**: Custom SVG-based rendering for 6 chart types (Area, Line, Columns, Step-Line, Candles, Trend).
 - **Interaction**: Real-time RSSI-style hover effects and coordinate tracking for data tooltips.
-- **Analysis**: Statistical reduction of transaction history to calculate Max Spend, Avg Daily, and feature usage counts (Emergency/Auto-Load).
-
-### D. User Verification & Identity
-- **Linking**: Users enter a 10-digit mobile number to verify. 
-- **Avatars**: Integrated with Dicebear API to provide unique visual identities based on the linked phone number.
-- **VPA**: Automatically generates a `{phone}@zippay` address for the merchant discovery network.
 
 ### E. Emergency ZiP (Offline Credit)
 - **Logic**: Triggered if `balance < requestedAmount` AND `balance >= 0`.
@@ -42,9 +42,8 @@ The state is unified in the project root to simulate a real-time local network:
 
 ### F. AI Insights (ZiP Assistant)
 - **Engine**: Gemini 3 Flash.
-- **Context Injection**: The AI is fed the current balance, bank balance, recent 5 transactions, and offline count to provide personalized financial advice.
+- **Context Injection**: The AI is fed current balance, bank balance, recent history, and offline status.
 
 ## 4. Sensory Design
 - **Success**: High-pitched rising sine waves + double haptic pulse + SVG checkmark animation.
-- **Error/Cancel**: Low-pitched falling sawtooth waves + triple haptic pulse.
-- **Charts**: Smooth CSS transitions and SVG `stroke-dashoffset` animations.
+- **Error/Cancel**: Low-pitched falling sawtooth waves + triple haptic pulse + Shake animation.
