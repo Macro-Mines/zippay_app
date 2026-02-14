@@ -4,6 +4,7 @@ import { GlobalState, Transaction, NotificationType } from '../types';
 import NotificationOverlay from './NotificationOverlay';
 import AIAssistant from './AIAssistant';
 import { haptics } from '../utils/haptics';
+import { GoogleGenAI } from "@google/genai";
 
 interface Props {
   userWallet: GlobalState['userWallet'];
@@ -20,6 +21,36 @@ interface Props {
 
 type ChartType = 'Area' | 'Line' | 'Columns' | 'Step-Line' | 'Candles' | 'Trend Analysis';
 type SortType = 'date-desc' | 'date-asc' | 'amt-desc' | 'amt-asc';
+
+// Helper functions for Audio
+function decode(base64: string) {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+async function decodeAudioData(
+  data: Uint8Array,
+  ctx: AudioContext,
+  sampleRate: number,
+  numChannels: number,
+): Promise<AudioBuffer> {
+  const dataInt16 = new Int16Array(data.buffer);
+  const frameCount = dataInt16.length / numChannels;
+  const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
+
+  for (let channel = 0; channel < numChannels; channel++) {
+    const channelData = buffer.getChannelData(channel);
+    for (let i = 0; i < frameCount; i++) {
+      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
+    }
+  }
+  return buffer;
+}
 
 const SmartphoneUPI: React.FC<Props> = ({ 
   userWallet, 
@@ -112,6 +143,44 @@ const SmartphoneUPI: React.FC<Props> = ({
       setSortType(prev => prev === 'date-desc' ? 'date-asc' : 'date-desc');
     } else {
       setSortType(prev => prev === 'amt-desc' ? 'amt-asc' : 'amt-desc');
+    }
+  };
+
+  const speakText = async (text: string) => {
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-preview-tts",
+        contents: [{ parts: [{ text }] }],
+        config: {
+          responseModalities: ["AUDIO"],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: 'Kore' },
+            },
+          },
+        },
+      });
+
+      const outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({sampleRate: 24000});
+      const outputNode = outputAudioContext.createGain();
+      outputNode.connect(outputAudioContext.destination);
+
+      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      if (base64Audio) {
+        const audioBuffer = await decodeAudioData(
+          decode(base64Audio),
+          outputAudioContext,
+          24000,
+          1,
+        );
+        const source = outputAudioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(outputNode);
+        source.start();
+      }
+    } catch (e) {
+      console.error("TTS Error:", e);
     }
   };
 
@@ -660,7 +729,15 @@ const SmartphoneUPI: React.FC<Props> = ({
           <div className="relative z-10">
             <div className="flex justify-between items-start mb-4">
               <div>
-                <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest mb-1">ZiP BALANCE</p>
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest">ZiP BALANCE</p>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); speakText(`Your current ZiP balance is ${userWallet.balance.toFixed(2)} rupees`); }}
+                    className="w-5 h-5 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+                  >
+                    <i className="fas fa-volume-up text-[10px] text-white"></i>
+                  </button>
+                </div>
                 <h3 className={`text-4xl font-black ${userWallet.balance < 0 ? 'text-red-400' : 'text-white'}`}>₹{userWallet.balance.toFixed(2)}</h3>
               </div>
               <div className="flex flex-col gap-2 items-end">
@@ -773,6 +850,7 @@ const SmartphoneUPI: React.FC<Props> = ({
                 onClick={() => {
                   haptics.mediumClick();
                   onLoadMoney(Number(amount));
+                  speakText(`Loaded ${amount} rupees to your zip wallet.`);
                   setAmount('');
                 }}
                 disabled={!isLoadReady || !amount || isLimitExceeded}

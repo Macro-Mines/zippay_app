@@ -63,6 +63,11 @@ const App: React.FC = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
+  // Clear phone alerts when switching modes to prevent cross-screen notification bleed
+  useEffect(() => {
+    setPhoneAlert(null);
+  }, [activeMode]);
+
   // NEW: Proximity Workflow - Terminal auto-activates when watch is active
   useEffect(() => {
     const watchIsActive = state.userWallet.isActive;
