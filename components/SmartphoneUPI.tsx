@@ -13,6 +13,7 @@ interface Props {
   onSync: () => void;
   onToggleConnectivity: (type: 'bluetooth' | 'wifi', value: boolean) => void;
   onToggleAutoReload: (enabled: boolean) => void;
+  onSetDailyLimit: (limit: number) => void;
   onCloseAlert: () => void;
   fullState: GlobalState;
 }
@@ -28,6 +29,7 @@ const SmartphoneUPI: React.FC<Props> = ({
   onSync, 
   onToggleConnectivity,
   onToggleAutoReload,
+  onSetDailyLimit,
   onCloseAlert,
   fullState
 }) => {
@@ -40,6 +42,10 @@ const SmartphoneUPI: React.FC<Props> = ({
   const [chartType, setChartType] = useState<ChartType>('Area');
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [sortType, setSortType] = useState<SortType>('date-desc');
+
+  // Daily Limit UI State
+  const [isEditingLimit, setIsEditingLimit] = useState(false);
+  const [tempLimit, setTempLimit] = useState(userWallet.dailyLimit.toString());
 
   // Profile States
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -67,6 +73,15 @@ const SmartphoneUPI: React.FC<Props> = ({
   ], []);
 
   const maxVal = 180; 
+
+  // Calculated displayed daily spent based on SYNCED transactions only
+  const displayedDailySpent = useMemo(() => {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    return userWallet.transactions
+      .filter(tx => tx.type === 'DEBIT' && tx.timestamp >= startOfDay.getTime())
+      .reduce((sum, tx) => sum + tx.amount, 0);
+  }, [userWallet.transactions]);
 
   // Stats Calculations for Analysis View
   const analysisStats = useMemo(() => {
@@ -100,6 +115,51 @@ const SmartphoneUPI: React.FC<Props> = ({
     }
   };
 
+  const exportHistoryReceipt = () => {
+    haptics.mediumClick();
+    const headers = "ZiPPaY TRANSACTION HISTORY RECEIPT\n--------------------------------\nGenerated: " + new Date().toLocaleString() + "\n\n";
+    const content = sortedTransactions.map(tx => {
+      const date = new Date(tx.timestamp).toLocaleString();
+      return `Transaction ID: ${tx.id}\nDate & Time: ${date}\nMerchant/Peer: ${tx.peer}\nType: ${tx.type}\nAmount: ₹${tx.amount}\n--------------------------------`;
+    }).join('\n\n');
+    
+    const blob = new Blob([headers + content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ZiPPaY_Receipt_${Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    haptics.successPulse();
+  };
+
+  const exportSpendingData = () => {
+    haptics.mediumClick();
+    let csv = "Transaction ID,Date,Time,Merchant/Peer,Type,Amount (INR)\n";
+    userWallet.transactions.forEach(tx => {
+      const d = new Date(tx.timestamp);
+      csv += `${tx.id},${d.toLocaleDateString()},${d.toLocaleTimeString()},${tx.peer.replace(',',' ')},${tx.type},${tx.amount}\n`;
+    });
+    
+    csv += "\nSUMMARY STATISTICS\n";
+    csv += `Weekly Total (Estimated),${analysisStats.totalWeekly.toFixed(2)}\n`;
+    csv += `Daily Spent (Actual),${displayedDailySpent.toFixed(2)}\n`;
+    csv += `Daily Limit,${userWallet.dailyLimit}\n`;
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ZiPPaY_Spending_Report_${Date.now()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    haptics.successPulse();
+  };
+
   const renderChart = () => {
     const width = 340;
     const height = 80;
@@ -110,48 +170,66 @@ const SmartphoneUPI: React.FC<Props> = ({
       ...d
     }));
 
-    const renderInteractions = () => (
-      <g>
-        {points.map((p, i) => (
-          <rect
-            key={`hitbox-${i}`}
-            x={p.x - 15}
-            y={0}
-            width={30}
-            height={height + padding * 2}
-            fill="transparent"
-            className="cursor-pointer"
-            onMouseEnter={() => { haptics.lightClick(); setHoveredIndex(i); }}
-            onMouseLeave={() => setHoveredIndex(null)}
-          />
-        ))}
-        {hoveredIndex !== null && (
-          <g className="pointer-events-none transition-all duration-300">
-            <line 
-              x1={points[hoveredIndex].x} y1={0} 
-              x2={points[hoveredIndex].x} y2={height + padding * 2} 
-              stroke="#6366f1" strokeWidth="1" strokeDasharray="4 2" 
-            />
-            <circle cx={points[hoveredIndex].x} cy={points[hoveredIndex].y} r="6" fill="#6366f1" className="animate-ping opacity-30" />
-            <circle cx={points[hoveredIndex].x} cy={points[hoveredIndex].y} r="4" fill="#6366f1" />
-            <rect 
-              x={points[hoveredIndex].x - 25} 
-              y={points[hoveredIndex].y - 30} 
-              width={50} height={20} rx={4} 
-              fill="#1e293b" stroke="#6366f1" strokeWidth="1" 
-            />
-            <text 
-              x={points[hoveredIndex].x} 
-              y={points[hoveredIndex].y - 17} 
-              textAnchor="middle" 
-              fill="#fff" fontSize="10" fontWeight="bold"
-            >
-              ₹{points[hoveredIndex].amount}
-            </text>
+    const renderInteractions = () => {
+        // Smart Tooltip Calculation
+        const pt = hoveredIndex !== null ? points[hoveredIndex] : null;
+        let tooltipX = 0;
+        let tooltipTextX = 0;
+        
+        if (pt) {
+            const tooltipWidth = 50;
+            tooltipX = pt.x - tooltipWidth / 2;
+            
+            // Clamp tooltip to chart bounds
+            if (tooltipX < 0) tooltipX = 0;
+            if (tooltipX > width - tooltipWidth) tooltipX = width - tooltipWidth;
+            
+            tooltipTextX = tooltipX + tooltipWidth / 2;
+        }
+
+        return (
+          <g>
+            {points.map((p, i) => (
+              <rect
+                key={`hitbox-${i}`}
+                x={p.x - 15}
+                y={0}
+                width={30}
+                height={height + padding * 2}
+                fill="transparent"
+                className="cursor-pointer"
+                onMouseEnter={() => { haptics.lightClick(); setHoveredIndex(i); }}
+                onMouseLeave={() => setHoveredIndex(null)}
+              />
+            ))}
+            {hoveredIndex !== null && pt && (
+              <g className="pointer-events-none transition-all duration-300">
+                <line 
+                  x1={pt.x} y1={0} 
+                  x2={pt.x} y2={height + padding * 2} 
+                  stroke="#6366f1" strokeWidth="1" strokeDasharray="4 2" 
+                />
+                <circle cx={pt.x} cy={pt.y} r="6" fill="#6366f1" className="animate-ping opacity-30" />
+                <circle cx={pt.x} cy={pt.y} r="4" fill="#6366f1" />
+                <rect 
+                  x={tooltipX} 
+                  y={pt.y - 30} 
+                  width={50} height={20} rx={4} 
+                  fill="#1e293b" stroke="#6366f1" strokeWidth="1" 
+                />
+                <text 
+                  x={tooltipTextX} 
+                  y={pt.y - 17} 
+                  textAnchor="middle" 
+                  fill="#fff" fontSize="10" fontWeight="bold"
+                >
+                  ₹{points[hoveredIndex].amount}
+                </text>
+              </g>
+            )}
           </g>
-        )}
-      </g>
-    );
+        );
+    };
 
     switch (chartType) {
       case 'Line':
@@ -176,24 +254,29 @@ const SmartphoneUPI: React.FC<Props> = ({
       case 'Columns':
         return (
           <div className="flex items-end justify-between h-full w-full gap-2 px-2 relative">
-            {prototypeData.map((d, i) => (
-              <div 
-                key={i} 
-                className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end"
-                onMouseEnter={() => { haptics.lightClick(); setHoveredIndex(i); }}
-                onMouseLeave={() => setHoveredIndex(null)}
-              >
+            {prototypeData.map((d, i) => {
+              // Determine alignment class for tooltip to keep it in frame
+              const tooltipAlignClass = i === 0 ? 'left-0 origin-bottom-left' : (i === prototypeData.length - 1 ? 'right-0 origin-bottom-right' : 'left-1/2 -translate-x-1/2 origin-bottom');
+              
+              return (
                 <div 
-                  style={{ height: `${(d.amount / maxVal) * 100}%` }}
-                  className={`w-full bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t-xl transition-all duration-700 ease-out min-h-[4px] ${hoveredIndex === i ? 'brightness-125 scale-x-105' : 'opacity-80'}`}
-                />
-                {hoveredIndex === i && (
-                  <div className="absolute -top-8 bg-slate-800 border border-indigo-500 text-[10px] font-black text-white px-2 py-1 rounded shadow-xl z-10 whitespace-nowrap">
-                    ₹{d.amount}
-                  </div>
-                )}
-              </div>
-            ))}
+                    key={i} 
+                    className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end"
+                    onMouseEnter={() => { haptics.lightClick(); setHoveredIndex(i); }}
+                    onMouseLeave={() => setHoveredIndex(null)}
+                >
+                    <div 
+                    style={{ height: `${(d.amount / maxVal) * 100}%` }}
+                    className={`w-full bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t-xl transition-all duration-700 ease-out min-h-[4px] ${hoveredIndex === i ? 'brightness-125 scale-x-105' : 'opacity-80'}`}
+                    />
+                    {hoveredIndex === i && (
+                    <div className={`absolute -top-8 bg-slate-800 border border-indigo-500 text-[10px] font-black text-white px-2 py-1 rounded shadow-xl z-20 whitespace-nowrap ${tooltipAlignClass}`}>
+                        ₹{d.amount}
+                    </div>
+                    )}
+                </div>
+              );
+            })}
           </div>
         );
       case 'Step-Line':
@@ -216,6 +299,8 @@ const SmartphoneUPI: React.FC<Props> = ({
               const bottom = (Math.min(d.open, d.close) / maxVal) * 100;
               const wickTop = (d.high / maxVal) * 100;
               const wickBottom = (d.low / maxVal) * 100;
+              const tooltipAlignClass = i === 0 ? 'left-0' : (i === prototypeData.length - 1 ? 'right-0' : 'left-1/2 -translate-x-1/2');
+
               return (
                 <div 
                   key={i} 
@@ -229,7 +314,7 @@ const SmartphoneUPI: React.FC<Props> = ({
                     style={{ height: `${Math.max(h, 2)}%`, bottom: `${bottom}%` }}
                   />
                   {hoveredIndex === i && (
-                    <div className="absolute -top-8 bg-slate-800 border border-slate-700 text-[9px] font-black text-white px-2 py-1 rounded shadow-xl z-10 whitespace-nowrap">
+                    <div className={`absolute -top-8 bg-slate-800 border border-slate-700 text-[9px] font-black text-white px-2 py-1 rounded shadow-xl z-20 whitespace-nowrap ${tooltipAlignClass}`}>
                       O:₹{d.open} C:₹{d.close}
                     </div>
                   )}
@@ -262,11 +347,20 @@ const SmartphoneUPI: React.FC<Props> = ({
     return (
       <div className={`${frameClasses} animate-in slide-in-from-right duration-300 mx-auto`}>
         <div className="hidden sm:block absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-950 rounded-b-2xl z-20"></div>
-        <div className="mt-8 flex items-center gap-4 mb-2 shrink-0">
-           <button onClick={() => { haptics.lightClick(); setShowFullHistory(false); }} className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors">
-             <i className="fas fa-chevron-left text-slate-300"></i>
+        <div className="mt-8 flex items-center justify-between mb-2 shrink-0 pr-2">
+           <div className="flex items-center gap-4">
+             <button onClick={() => { haptics.lightClick(); setShowFullHistory(false); }} className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors">
+               <i className="fas fa-chevron-left text-slate-300"></i>
+             </button>
+             <h2 className="text-xl font-bold">History</h2>
+           </div>
+           <button 
+             onClick={exportHistoryReceipt}
+             className="w-10 h-10 rounded-full bg-slate-800 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center transition-all"
+             title="Export Receipt"
+           >
+             <i className="fas fa-file-invoice text-sm"></i>
            </button>
-           <h2 className="text-xl font-bold">History</h2>
         </div>
 
         {/* Sort Bar */}
@@ -319,17 +413,9 @@ const SmartphoneUPI: React.FC<Props> = ({
 
   // Spending Analysis View Overlay
   if (showAnalysis) {
+    // ... existing content (omitted for brevity as no changes requested in this view)
     const total = analysisStats.totalWeekly;
-    const contrastColors = [
-      '#6366f1', // Indigo
-      '#f43f5e', // Rose
-      '#10b981', // Emerald
-      '#f59e0b', // Amber
-      '#0ea5e9', // Sky
-      '#8b5cf6', // Violet
-      '#d946ef'  // Fuchsia
-    ];
-    
+    const contrastColors = ['#6366f1', '#f43f5e', '#10b981', '#f59e0b', '#0ea5e9', '#8b5cf6', '#d946ef'];
     const slices = prototypeData.map((d, i) => ({
       label: d.label,
       percent: (d.amount / total) * 100,
@@ -340,20 +426,24 @@ const SmartphoneUPI: React.FC<Props> = ({
       <div className={`${frameClasses} animate-in slide-in-from-bottom duration-500 mx-auto z-[120]`}>
         <div className="mt-8 flex items-center justify-between mb-8 shrink-0">
            <h2 className="text-xl font-bold">Spending Stats</h2>
-           <button onClick={() => { haptics.lightClick(); setShowAnalysis(false); }} className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center">
-             <i className="fas fa-times text-slate-400"></i>
-           </button>
+           <div className="flex gap-2">
+             <button 
+                onClick={exportSpendingData} 
+                className="px-4 h-10 rounded-full bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/20 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all"
+             >
+               <i className="fas fa-file-csv"></i> Export
+             </button>
+             <button onClick={() => { haptics.lightClick(); setShowAnalysis(false); }} className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center">
+               <i className="fas fa-times text-slate-400"></i>
+             </button>
+           </div>
         </div>
-
         <div className="flex-1 overflow-y-auto scrollbar-hidden pb-10 space-y-6">
-           {/* Weekly Total Card */}
            <div className="bg-indigo-600/10 border border-indigo-500/20 rounded-3xl p-6 text-center">
               <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Weekly Total</p>
               <h3 className="text-4xl font-black text-white">₹{total.toFixed(2)}</h3>
               <p className="text-[9px] text-indigo-300/60 font-medium mt-2">Analyzed from prototype data set</p>
            </div>
-
-           {/* Stats Grid */}
            <div className="grid grid-cols-2 gap-3">
               {[
                 { label: 'Max Spend', val: `₹${analysisStats.maxDay.amount}`, sub: analysisStats.maxDay.label, icon: 'fa-fire' },
@@ -373,8 +463,6 @@ const SmartphoneUPI: React.FC<Props> = ({
                 </div>
               ))}
            </div>
-
-           {/* Pie Chart Section */}
            <div className="bg-slate-800/20 rounded-3xl p-6 border border-slate-800/50">
               <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 text-center">Spending Distribution</h4>
               <div className="flex flex-col items-center gap-8">
@@ -420,10 +508,12 @@ const SmartphoneUPI: React.FC<Props> = ({
     );
   }
 
-  // User Profile View Overlay
+  // User Profile View Overlay (omitted for brevity)
   if (showProfile) {
+    // ... existing profile content
     return (
       <div className={`${frameClasses} animate-in slide-in-from-left duration-300 mx-auto`}>
+        {/* ... (Existing Profile JSX) ... */}
         <div className="hidden sm:block absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-950 rounded-b-2xl z-20"></div>
         <div className="mt-8 flex items-center gap-4 mb-10 shrink-0">
            <button onClick={() => { haptics.lightClick(); setShowProfile(false); }} className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors">
@@ -431,9 +521,7 @@ const SmartphoneUPI: React.FC<Props> = ({
            </button>
            <h2 className="text-xl font-bold">User Profile</h2>
         </div>
-
         <div className="flex-1 space-y-10 overflow-y-auto scrollbar-hidden">
-           {/* Avatar and Info Section */}
            <div className="flex flex-col items-center">
               <div className="relative">
                 <div className="w-28 h-28 rounded-full bg-slate-800 border-4 border-slate-700 flex items-center justify-center overflow-hidden shadow-2xl">
@@ -454,8 +542,6 @@ const SmartphoneUPI: React.FC<Props> = ({
                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">ZiPPaY Micro-Pay Wallet</p>
               </div>
            </div>
-
-           {/* Form Section */}
            <div className="space-y-6">
               <div className="space-y-3">
                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Enter Phone Number</label>
@@ -473,7 +559,6 @@ const SmartphoneUPI: React.FC<Props> = ({
                     />
                  </div>
               </div>
-
               <button 
                 onClick={() => {
                   if (phoneNumber.length === 10) {
@@ -487,7 +572,6 @@ const SmartphoneUPI: React.FC<Props> = ({
                 <i className={`fas ${isLinked ? 'fa-sync' : 'fa-link'}`}></i>
                 {isLinked ? 'Update Link' : 'Link Bank Account'}
               </button>
-
               {isLinked && (
                 <div className="bg-slate-800/40 border border-slate-800/60 rounded-[2rem] p-6 space-y-4 animate-in slide-in-from-bottom-4 duration-500">
                    <div className="flex items-center justify-between pb-4 border-b border-slate-800/50">
@@ -515,8 +599,6 @@ const SmartphoneUPI: React.FC<Props> = ({
               )}
            </div>
         </div>
-
-        {/* Home Indicator Pillar */}
         <div className="mt-auto py-2 shrink-0 border-t border-slate-800/30 bg-slate-900/50 backdrop-blur-sm -mx-8 px-8">
            <div className="w-16 h-1.5 bg-slate-800/50 rounded-full mx-auto"></div>
         </div>
@@ -628,6 +710,41 @@ const SmartphoneUPI: React.FC<Props> = ({
           </button>
         </div>
 
+        {/* Daily Spending Limit Row */}
+        <div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-800/50 flex flex-col gap-3 transition-all shrink-0">
+          <div className="flex justify-between items-center">
+            <div>
+              <h4 className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-0.5">Daily Spending Limit</h4>
+              <p className="text-[8px] text-slate-500 font-medium">
+                Used: <span className={displayedDailySpent > userWallet.dailyLimit * 0.9 ? 'text-red-400 font-bold' : 'text-slate-400'}>₹{displayedDailySpent.toFixed(0)}</span> / ₹{userWallet.dailyLimit}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {isEditingLimit ? (
+                <div className="flex items-center gap-1">
+                  <input 
+                    type="number" 
+                    value={tempLimit}
+                    onChange={(e) => setTempLimit(e.target.value)}
+                    className="w-16 bg-slate-900 border border-indigo-500 rounded px-2 py-1 text-[10px] text-white focus:outline-none"
+                    autoFocus
+                  />
+                  <button onClick={() => { onSetDailyLimit(Number(tempLimit)); setIsEditingLimit(false); }} className="text-green-400 text-xs px-1"><i className="fas fa-check"></i></button>
+                  <button onClick={() => setIsEditingLimit(false)} className="text-red-400 text-xs px-1"><i className="fas fa-times"></i></button>
+                </div>
+              ) : (
+                <button onClick={() => { setTempLimit(userWallet.dailyLimit.toString()); setIsEditingLimit(true); }} className="text-[9px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded-lg border border-indigo-500/20">EDIT</button>
+              )}
+            </div>
+          </div>
+          <div className="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
+            <div 
+              className={`h-full transition-all duration-500 ${displayedDailySpent >= userWallet.dailyLimit ? 'bg-red-500' : (displayedDailySpent >= userWallet.dailyLimit * 0.8 ? 'bg-yellow-500' : 'bg-indigo-500')}`} 
+              style={{ width: `${Math.min((displayedDailySpent / userWallet.dailyLimit) * 100, 100)}%` }}
+            ></div>
+          </div>
+        </div>
+
         {/* Top-up Input Section */}
         <div className="shrink-0">
           <div className="flex justify-between items-center mb-3 px-1">
@@ -665,8 +782,8 @@ const SmartphoneUPI: React.FC<Props> = ({
               </button>
               <button 
                 onClick={() => { haptics.mediumClick(); onSync(); }}
-                disabled={!connectivity.isBluetoothOn}
-                className={`flex-1 py-3.5 rounded-2xl font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${connectivity.isBluetoothOn ? 'bg-slate-800 text-indigo-400 border border-indigo-500/10 hover:border-indigo-500/40 active:scale-95' : 'bg-slate-900/50 text-slate-700 border border-slate-800 cursor-not-allowed'}`}
+                disabled={!isWatchLinked}
+                className={`flex-1 py-3.5 rounded-2xl font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${isWatchLinked ? 'bg-slate-800 text-indigo-400 border border-indigo-500/10 hover:border-indigo-500/40 active:scale-95' : 'bg-slate-900/50 text-slate-700 border border-slate-800 cursor-not-allowed'}`}
               >
                 <i className="fas fa-sync-alt"></i> Sync
               </button>
@@ -688,7 +805,8 @@ const SmartphoneUPI: React.FC<Props> = ({
                ))}
              </select>
           </div>
-          <div className="bg-slate-800/30 rounded-[2.5rem] p-6 border border-slate-800/40 shadow-inner group">
+          {/* Removed overflow-hidden to prevent tooltips from being clipped */}
+          <div className="bg-slate-800/30 rounded-[3.5rem] pt-6 px-6 pb-3 border border-slate-800/40 shadow-inner group">
              <div className="h-24 w-full flex items-center justify-center">
                {renderChart()}
              </div>
@@ -700,7 +818,7 @@ const SmartphoneUPI: React.FC<Props> = ({
                ))}
              </div>
              
-             {/* Analysis Button */}
+             {/* Analysis Button - Bottom gap reduced via parent pb-3 */}
              <button 
               onClick={() => { haptics.mediumClick(); setShowAnalysis(true); }}
               className="w-full mt-6 py-3 rounded-2xl bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/20 text-[9px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 group/btn"

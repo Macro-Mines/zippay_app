@@ -1,3 +1,4 @@
+
 export enum AppMode {
   UPI = 'UPI',
   WATCH = 'WATCH',
@@ -29,7 +30,9 @@ export interface GlobalState {
     pendingSync: Transaction[];   // Local to Watch, not yet synced
     offlineCount: number;
     isActive: boolean;
-    isAutoReloadEnabled: boolean; // New feature toggle
+    isAutoReloadEnabled: boolean;
+    dailyLimit: number; // New: Daily spending limit
+    dailySpent: number; // New: Amount spent today
   };
   merchantWallet: {
     balance: number;

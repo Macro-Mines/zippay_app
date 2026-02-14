@@ -8,7 +8,7 @@ Planned enhancements and future milestones for the ZiPPaY ecosystem.
 - [x] **Advanced Sorting**: History sorting by date/amount on all devices.
 - [x] **Limit Enforcement**: Visual feedback for wallet capacity (₹500).
 - [x] **Spending Analytics**: 6-type interactive chart engine.
-- [x] **AI Assistant**: Gemini-powered finance coach.
+- [x] **Advanced AI Coach**: Gemini-powered proactive coaching and anomaly detection.
 
 ## 🚀 Phase 2: Security & Control (Upcoming)
 - [ ] **Daily Spending Limits**: User-defined cap on total watch transactions per day.

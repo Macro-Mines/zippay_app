@@ -10,7 +10,7 @@ To make small-value transactions (micro-payments) as fast as a "ZiP" by moving t
 - **Advanced Sorting**: History views on both Watch and Phone now support sorting by Date and Amount.
 - **Smart Top-Up Validation**: Real-time feedback and limit enforcement for the ₹500 wallet capacity.
 - **Spending Analytics**: Interactive dashboard with 6 different chart types (Area, Candles, Trend, etc.) and deep-dive statistical analysis.
-- **AI Assistant**: Integration with Google Gemini for real-time financial coaching and spending analysis.
+- **Advanced AI Coach (New)**: Personalized financial coaching with proactive pattern analysis, unusual activity alerts, and micro-savings goal tracking powered by Gemini 3.
 - **Offline Capability**: Allows up to 5 transactions on the watch without an active internet connection.
 - **Emergency ZiP**: A unique credit feature allowing transactions even at zero balance (includes a 4% convenience fee).
 - **Merchant Terminal**: A simplified POS interface for requesting payments and settling funds.

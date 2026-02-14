@@ -18,6 +18,8 @@ const initialState: GlobalState = {
     offlineCount: 0,
     isActive: true,
     isAutoReloadEnabled: false,
+    dailyLimit: 2000,
+    dailySpent: 0,
   },
   merchantWallet: {
     balance: 0,
@@ -40,8 +42,15 @@ const App: React.FC = () => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed.userWallet && parsed.userWallet.isAutoReloadEnabled === undefined) {
-        parsed.userWallet.isAutoReloadEnabled = false;
+      // Migration for new features
+      if (parsed.userWallet) {
+        if (parsed.userWallet.isAutoReloadEnabled === undefined) {
+          parsed.userWallet.isAutoReloadEnabled = false;
+        }
+        if (parsed.userWallet.dailyLimit === undefined) {
+          parsed.userWallet.dailyLimit = 2000;
+          parsed.userWallet.dailySpent = 0;
+        }
       }
       return parsed;
     }
@@ -101,6 +110,16 @@ const App: React.FC = () => {
     sounds.playPop();
     haptics.lightClick();
     triggerPhoneAlert(enabled ? "Auto-Reload enabled (₹50 → ₹200)" : "Auto-Reload disabled", 'info');
+  };
+
+  const handleSetDailyLimit = (limit: number) => {
+    setState(prev => ({
+      ...prev,
+      userWallet: { ...prev.userWallet, dailyLimit: limit }
+    }));
+    sounds.playPop();
+    haptics.lightClick();
+    triggerPhoneAlert(`Daily spending limit set to ₹${limit}`, 'success');
   };
 
   useEffect(() => {
@@ -265,6 +284,11 @@ const App: React.FC = () => {
         return triggerWatchAlert("DEBT PENDING", 'error');
       }
     }
+
+    // Daily Limit Check
+    if (state.userWallet.dailySpent + finalDebitAmount > state.userWallet.dailyLimit) {
+      return triggerWatchAlert("DAILY LIMIT", 'error');
+    }
     
     if (state.userWallet.offlineCount >= 5) {
       return triggerWatchAlert("SYNC REQUIRED", 'error');
@@ -293,6 +317,7 @@ const App: React.FC = () => {
         balance: prev.userWallet.balance - finalDebitAmount,
         pendingSync: [tx, ...prev.userWallet.pendingSync],
         offlineCount: prev.userWallet.offlineCount + 1,
+        dailySpent: prev.userWallet.dailySpent + finalDebitAmount, // Update daily spent
       },
       merchantWallet: {
         ...prev.merchantWallet,
@@ -405,6 +430,7 @@ const App: React.FC = () => {
               onSync={syncWatch}
               onToggleConnectivity={setConnectivity}
               onToggleAutoReload={toggleAutoReload}
+              onSetDailyLimit={handleSetDailyLimit}
               onCloseAlert={() => setPhoneAlert(null)}
               fullState={state}
             />
