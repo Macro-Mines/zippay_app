@@ -9,41 +9,36 @@ ZiPPaY operates as a distributed state system across three virtual "nodes":
 3. **Merchant Terminal**: The "Point of Sale" for initiating requests.
 4. **ZiP AI Assistant**: A Google Gemini-powered service for analyzing spending patterns.
 
-## 2. Data Model (`GlobalState`)
-The state is unified in the project root to simulate a real-time local network:
-- **User Wallet**: Balance, Bank Balance, Transactions, and `pendingSync` (watch-only).
-- **Spending Data**: A 7-day prototype dataset (MON-SUN) used for rendering high-fidelity visualizations.
-- **Profile**: Phone-linked identity state including VPA and bank ledger details.
-- **Connectivity**: Boolean flags for Bluetooth and Wi-Fi status.
+## 2. Key Technical Components
 
-## 3. Key Workflows
+### A. State Management
+- **Global State**: Unified in the project root to simulate a local network.
+- **Transaction History**: Divided into `transactions` (synced) and `pendingSync` (watch-local).
+- **Sorting Hook**: Uses `useMemo` with `SortType` ('date-desc', 'date-asc', 'amt-desc', 'amt-asc') to provide instant list reordering.
 
-### A. Funding the Wallet (Load)
-- **Condition**: Requires Bluetooth (Phone -> Watch) AND Wi-Fi (Phone -> Bank).
-- **Logic**: Deducts from `phoneBalance` and adds to `userWallet.balance`.
-- **Validation**: Rejects amounts > ₹500 or loads that take the total balance over ₹500. Provides real-time red-border feedback.
+### B. Validation Engine
+- **Load Limit**: Prevents loading if `amount > 500` or `balance + amount > 500`.
+- **Payment Limit**: Hard cap of ₹200 per transaction to ensure micro-payment safety.
+- **Sync Limit**: Maximum 5 offline transactions allowed before a Bluetooth sync is mandatory.
 
-### B. Transaction Management (Sorting)
-- **Logic**: Implemented using `useMemo` hooks for performance.
-- **Sort Types**: `date-desc` (Newest), `date-asc` (Oldest), `amt-desc` (Highest), `amt-asc` (Lowest).
-- **UI**: Context-aware sort bars in history views on both watch and phone.
+### C. Visual Analytics
+- **SVG Engine**: Custom rendering for financial charts (Area, Line, Step, Columns, Candles, Trend).
+- **Analysis Stats**: Aggregated data using `useMemo` to calculate weekly totals, max spend, and transaction frequency.
 
-### C. The Offline Payment
-- **Condition**: Watch must be `ACTIVE`.
-- **Limit Check**: Watch allows 5 transactions (`offlineCount`) before requiring a sync.
+### D. Sensory System
+- **Audio**: `SoundManager` uses `AudioContext` to synthesize success/error tones.
+- **Haptics**: `HapticManager` provides discrete vibration patterns for tactile feedback.
 
-### D. Visual Analytics Engine
-- **Engine**: Custom SVG-based rendering for 6 chart types (Area, Line, Columns, Step-Line, Candles, Trend).
-- **Interaction**: Real-time RSSI-style hover effects and coordinate tracking for data tooltips.
+## 3. Workflow Logics
 
-### E. Emergency ZiP (Offline Credit)
-- **Logic**: Triggered if `balance < requestedAmount` AND `balance >= 0`.
-- **Fee**: 4% convenience fee applied to the total debit.
+### Emergency ZiP
+If `balance < requestedAmount` AND `balance >= 0`:
+1. Apply 4% convenience fee.
+2. Allow transaction to proceed into negative balance.
+3. Block further payments until balance is restored.
 
-### F. AI Insights (ZiP Assistant)
-- **Engine**: Gemini 3 Flash.
-- **Context Injection**: The AI is fed current balance, bank balance, recent history, and offline status.
-
-## 4. Sensory Design
-- **Success**: High-pitched rising sine waves + double haptic pulse + SVG checkmark animation.
-- **Error/Cancel**: Low-pitched falling sawtooth waves + triple haptic pulse + Shake animation.
+### Auto-Reload
+If `isAutoReloadEnabled` AND `balance < 50`:
+1. Check phone connectivity (Wi-Fi + BT).
+2. Transfer funds from `phoneBalance` to reach ₹200.
+3. Auto-sync the transaction to the ledger.
