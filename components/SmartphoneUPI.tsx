@@ -32,9 +32,11 @@ const SmartphoneUPI: React.FC<Props> = ({
 }) => {
   const [amount, setAmount] = useState<string>('');
   const [showFullHistory, setShowFullHistory] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useState(false);
   const [showAI, setShowAI] = useState(false);
   const [time, setTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }));
   const [chartType, setChartType] = useState<ChartType>('Area');
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -48,16 +50,29 @@ const SmartphoneUPI: React.FC<Props> = ({
 
   // Prototype / Dummy Data for visualization
   const prototypeData = useMemo(() => [
-    { label: 'M', amount: 45, high: 55, low: 30, open: 35, close: 45 },
-    { label: 'T', amount: 82, high: 90, low: 60, open: 45, close: 82 },
-    { label: 'W', amount: 35, high: 45, low: 20, open: 82, close: 35 },
-    { label: 'T', amount: 120, high: 135, low: 100, open: 35, close: 120 },
-    { label: 'F', amount: 65, high: 80, low: 50, open: 120, close: 65 },
-    { label: 'S', amount: 150, high: 165, low: 130, open: 65, close: 150 },
-    { label: 'S', amount: 95, high: 110, low: 80, open: 150, close: 95 },
+    { label: 'MON', amount: 45, high: 55, low: 30, open: 35, close: 45 },
+    { label: 'TUE', amount: 82, high: 90, low: 60, open: 45, close: 82 },
+    { label: 'WED', amount: 35, high: 45, low: 20, open: 82, close: 35 },
+    { label: 'THU', amount: 120, high: 135, low: 100, open: 35, close: 120 },
+    { label: 'FRI', amount: 65, high: 80, low: 50, open: 120, close: 65 },
+    { label: 'SAT', amount: 150, high: 165, low: 130, open: 65, close: 150 },
+    { label: 'SUN', amount: 95, high: 110, low: 80, open: 150, close: 95 },
   ], []);
 
-  const maxVal = 180; // Fixed scale for prototype consistency
+  const maxVal = 180; 
+
+  // Stats Calculations for Analysis View
+  const analysisStats = useMemo(() => {
+    const transactions = userWallet.transactions;
+    const totalWeekly = prototypeData.reduce((sum, d) => sum + d.amount, 0);
+    const maxDay = prototypeData.reduce((prev, curr) => (curr.amount > prev.amount ? curr : prev), prototypeData[0]);
+    const emergencyCount = transactions.filter(tx => tx.peer.includes('Emergency')).length;
+    const topUpCount = transactions.filter(tx => tx.type === 'CREDIT' && !tx.peer.includes('Auto-Reload')).length;
+    const autoLoadCount = transactions.filter(tx => tx.peer.includes('Auto-Reload')).length;
+    const avgDaily = totalWeekly / 7;
+
+    return { totalWeekly, maxDay, emergencyCount, topUpCount, autoLoadCount, avgDaily };
+  }, [userWallet.transactions, prototypeData]);
 
   const renderChart = () => {
     const width = 340;
@@ -69,6 +84,49 @@ const SmartphoneUPI: React.FC<Props> = ({
       ...d
     }));
 
+    const renderInteractions = () => (
+      <g>
+        {points.map((p, i) => (
+          <rect
+            key={`hitbox-${i}`}
+            x={p.x - 15}
+            y={0}
+            width={30}
+            height={height + padding * 2}
+            fill="transparent"
+            className="cursor-pointer"
+            onMouseEnter={() => { haptics.lightClick(); setHoveredIndex(i); }}
+            onMouseLeave={() => setHoveredIndex(null)}
+          />
+        ))}
+        {hoveredIndex !== null && (
+          <g className="pointer-events-none transition-all duration-300">
+            <line 
+              x1={points[hoveredIndex].x} y1={0} 
+              x2={points[hoveredIndex].x} y2={height + padding * 2} 
+              stroke="#6366f1" strokeWidth="1" strokeDasharray="4 2" 
+            />
+            <circle cx={points[hoveredIndex].x} cy={points[hoveredIndex].y} r="6" fill="#6366f1" className="animate-ping opacity-30" />
+            <circle cx={points[hoveredIndex].x} cy={points[hoveredIndex].y} r="4" fill="#6366f1" />
+            <rect 
+              x={points[hoveredIndex].x - 25} 
+              y={points[hoveredIndex].y - 30} 
+              width={50} height={20} rx={4} 
+              fill="#1e293b" stroke="#6366f1" strokeWidth="1" 
+            />
+            <text 
+              x={points[hoveredIndex].x} 
+              y={points[hoveredIndex].y - 17} 
+              textAnchor="middle" 
+              fill="#fff" fontSize="10" fontWeight="bold"
+            >
+              ₹{points[hoveredIndex].amount}
+            </text>
+          </g>
+        )}
+      </g>
+    );
+
     switch (chartType) {
       case 'Line':
       case 'Area':
@@ -77,9 +135,10 @@ const SmartphoneUPI: React.FC<Props> = ({
         return (
           <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height + padding * 2}`} className="overflow-visible">
             {chartType === 'Area' && (
-              <path d={areaPath} fill="url(#chartGradient)" className="opacity-30" />
+              <path d={areaPath} fill="url(#chartGradient)" className="opacity-30 animate-in fade-in duration-700" />
             )}
-            <path d={linePath} fill="none" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            <path d={linePath} fill="none" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="chart-path-animation" />
+            {renderInteractions()}
             <defs>
               <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#6366f1" />
@@ -90,13 +149,23 @@ const SmartphoneUPI: React.FC<Props> = ({
         );
       case 'Columns':
         return (
-          <div className="flex items-end justify-between h-full w-full gap-2 px-2">
+          <div className="flex items-end justify-between h-full w-full gap-2 px-2 relative">
             {prototypeData.map((d, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end">
+              <div 
+                key={i} 
+                className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end"
+                onMouseEnter={() => { haptics.lightClick(); setHoveredIndex(i); }}
+                onMouseLeave={() => setHoveredIndex(null)}
+              >
                 <div 
                   style={{ height: `${(d.amount / maxVal) * 100}%` }}
-                  className="w-full bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t-xl transition-all duration-700 ease-out min-h-[4px]"
+                  className={`w-full bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t-xl transition-all duration-700 ease-out min-h-[4px] ${hoveredIndex === i ? 'brightness-125 scale-x-105' : 'opacity-80'}`}
                 />
+                {hoveredIndex === i && (
+                  <div className="absolute -top-8 bg-slate-800 border border-indigo-500 text-[10px] font-black text-white px-2 py-1 rounded shadow-xl z-10 whitespace-nowrap">
+                    ₹{d.amount}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -108,12 +177,13 @@ const SmartphoneUPI: React.FC<Props> = ({
         }
         return (
           <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height + padding * 2}`} className="overflow-visible">
-            <path d={stepPath} fill="none" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            <path d={stepPath} fill="none" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="chart-path-animation" />
+            {renderInteractions()}
           </svg>
         );
       case 'Candles':
         return (
-          <div className="flex items-end justify-between h-full w-full gap-2 px-2">
+          <div className="flex items-end justify-between h-full w-full gap-2 px-2 relative">
             {prototypeData.map((d, i) => {
               const isUp = d.close >= d.open;
               const h = Math.abs(((d.close - d.open) / maxVal) * 100);
@@ -121,12 +191,22 @@ const SmartphoneUPI: React.FC<Props> = ({
               const wickTop = (d.high / maxVal) * 100;
               const wickBottom = (d.low / maxVal) * 100;
               return (
-                <div key={i} className="flex-1 relative h-full flex flex-col items-center">
+                <div 
+                  key={i} 
+                  className={`flex-1 relative h-full flex flex-col items-center transition-all ${hoveredIndex === i ? 'scale-110' : 'opacity-80'}`}
+                  onMouseEnter={() => { haptics.lightClick(); setHoveredIndex(i); }}
+                  onMouseLeave={() => setHoveredIndex(null)}
+                >
                   <div className="absolute w-px bg-slate-700" style={{ height: `${wickTop - wickBottom}%`, bottom: `${wickBottom}%` }} />
                   <div 
                     className={`absolute w-full rounded-sm border ${isUp ? 'bg-green-500/40 border-green-500' : 'bg-red-500/40 border-red-500'}`}
                     style={{ height: `${Math.max(h, 2)}%`, bottom: `${bottom}%` }}
                   />
+                  {hoveredIndex === i && (
+                    <div className="absolute -top-8 bg-slate-800 border border-slate-700 text-[9px] font-black text-white px-2 py-1 rounded shadow-xl z-10 whitespace-nowrap">
+                      O:₹{d.open} C:₹{d.close}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -139,9 +219,10 @@ const SmartphoneUPI: React.FC<Props> = ({
         const trendPath = trendPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
         return (
           <svg width="100%" height="100%" viewBox={`0 0 ${width + 40} ${height + padding * 2}`} className="overflow-visible">
-            <path d={trendPath} fill="none" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" />
-            <line x1={last.x} y1={last.y} x2={predicted.x} y2={predicted.y} stroke="#6366f1" strokeWidth="3" strokeDasharray="4 4" />
-            <circle cx={predicted.x} cy={predicted.y} r="4" fill="#6366f1" className="animate-pulse" />
+            <path d={trendPath} fill="none" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" className="chart-path-animation" />
+            <line x1={last.x} y1={last.y} x2={predicted.x} y2={predicted.y} stroke="#6366f1" strokeWidth="3" strokeDasharray="4 4" className="animate-pulse" />
+            <circle cx={predicted.x} cy={predicted.y} r="4" fill="#6366f1" className="animate-ping" />
+            {renderInteractions()}
           </svg>
         );
       default:
@@ -187,6 +268,109 @@ const SmartphoneUPI: React.FC<Props> = ({
               </div>
             ))
           )}
+        </div>
+      </div>
+    );
+  }
+
+  // Spending Analysis View Overlay
+  if (showAnalysis) {
+    const total = analysisStats.totalWeekly;
+    const contrastColors = [
+      '#6366f1', // Indigo
+      '#f43f5e', // Rose
+      '#10b981', // Emerald
+      '#f59e0b', // Amber
+      '#0ea5e9', // Sky
+      '#8b5cf6', // Violet
+      '#d946ef'  // Fuchsia
+    ];
+    
+    const slices = prototypeData.map((d, i) => ({
+      label: d.label,
+      percent: (d.amount / total) * 100,
+      color: contrastColors[i % contrastColors.length]
+    }));
+
+    return (
+      <div className={`${frameClasses} animate-in slide-in-from-bottom duration-500 mx-auto z-[120]`}>
+        <div className="mt-8 flex items-center justify-between mb-8 shrink-0">
+           <h2 className="text-xl font-bold">Spending Stats</h2>
+           <button onClick={() => { haptics.lightClick(); setShowAnalysis(false); }} className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center">
+             <i className="fas fa-times text-slate-400"></i>
+           </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto scrollbar-hidden pb-10 space-y-6">
+           {/* Weekly Total Card */}
+           <div className="bg-indigo-600/10 border border-indigo-500/20 rounded-3xl p-6 text-center">
+              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Weekly Total</p>
+              <h3 className="text-4xl font-black text-white">₹{total.toFixed(2)}</h3>
+              <p className="text-[9px] text-indigo-300/60 font-medium mt-2">Analyzed from prototype data set</p>
+           </div>
+
+           {/* Stats Grid */}
+           <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: 'Max Spend', val: `₹${analysisStats.maxDay.amount}`, sub: analysisStats.maxDay.label, icon: 'fa-fire' },
+                { label: 'Avg Daily', val: `₹${analysisStats.avgDaily.toFixed(0)}`, sub: 'Estimated', icon: 'fa-chart-line' },
+                { label: 'Emergency', val: analysisStats.emergencyCount, sub: 'Times Used', icon: 'fa-bolt' },
+                { label: 'Top-Ups', val: analysisStats.topUpCount, sub: 'Manual Load', icon: 'fa-plus' },
+                { label: 'Auto-Loads', val: analysisStats.autoLoadCount, sub: 'Triggered', icon: 'fa-sync' },
+                { label: 'Watch Active', val: '84%', sub: 'Uptime', icon: 'fa-clock' }
+              ].map((s, i) => (
+                <div key={i} className="bg-slate-800/40 border border-slate-800/60 rounded-2xl p-4">
+                   <div className="flex items-center gap-2 mb-2">
+                     <i className={`fas ${s.icon} text-[10px] text-indigo-400`}></i>
+                     <p className="text-[8px] font-black text-slate-500 uppercase">{s.label}</p>
+                   </div>
+                   <p className="text-lg font-black text-white">{s.val}</p>
+                   <p className="text-[9px] text-slate-600 font-bold">{s.sub}</p>
+                </div>
+              ))}
+           </div>
+
+           {/* Pie Chart Section */}
+           <div className="bg-slate-800/20 rounded-3xl p-6 border border-slate-800/50">
+              <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 text-center">Spending Distribution</h4>
+              <div className="flex flex-col items-center gap-8">
+                 <div className="relative w-32 h-32">
+                    <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
+                       {slices.reduce((acc: any, slice, idx) => {
+                          const strokeDash = `${slice.percent} ${100 - slice.percent}`;
+                          const offset = 100 - acc.totalPercent;
+                          acc.elements.push(
+                            <circle
+                              key={idx}
+                              cx="18" cy="18" r="15.915"
+                              fill="transparent"
+                              stroke={slice.color}
+                              strokeWidth="4"
+                              strokeDasharray={strokeDash}
+                              strokeDashoffset={offset}
+                              className="transition-all duration-1000 ease-out"
+                            />
+                          );
+                          acc.totalPercent += slice.percent;
+                          return acc;
+                       }, { elements: [], totalPercent: 0 }).elements}
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                       <p className="text-[10px] font-black text-white">PIE</p>
+                       <p className="text-[8px] text-slate-500 font-bold uppercase">View</p>
+                    </div>
+                 </div>
+                 <div className="grid grid-cols-2 gap-x-8 gap-y-2 w-full">
+                    {slices.map((s, i) => (
+                       <div key={i} className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }}></div>
+                          <span className="text-[9px] font-black text-slate-400">{s.label}</span>
+                          <span className="text-[9px] font-bold text-slate-600 ml-auto">{s.percent.toFixed(0)}%</span>
+                       </div>
+                    ))}
+                 </div>
+              </div>
+           </div>
         </div>
       </div>
     );
@@ -341,17 +525,26 @@ const SmartphoneUPI: React.FC<Props> = ({
                ))}
              </select>
           </div>
-          <div className="bg-slate-800/30 rounded-[2.5rem] p-6 border border-slate-800/40 shadow-inner">
+          <div className="bg-slate-800/30 rounded-[2.5rem] p-6 border border-slate-800/40 shadow-inner group">
              <div className="h-24 w-full flex items-center justify-center">
                {renderChart()}
              </div>
              <div className="flex justify-between mt-4 px-2">
                {prototypeData.map((d, i) => (
-                 <span key={i} className="text-[8px] font-black text-slate-600 uppercase transition-colors hover:text-indigo-400">
-                   {d.label}
+                 <span key={i} className={`text-[8px] font-black uppercase transition-colors ${hoveredIndex === i ? 'text-indigo-400' : 'text-slate-600'}`}>
+                   {d.label[0]}
                  </span>
                ))}
              </div>
+             
+             {/* Analysis Button */}
+             <button 
+              onClick={() => { haptics.mediumClick(); setShowAnalysis(true); }}
+              className="w-full mt-6 py-3 rounded-2xl bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/20 text-[9px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 group/btn"
+             >
+               <i className="fas fa-chart-pie group-hover/btn:rotate-12 transition-transform"></i>
+               Analyze Your Spending
+             </button>
           </div>
         </div>
 
@@ -411,6 +604,17 @@ const SmartphoneUPI: React.FC<Props> = ({
           onClose={onCloseAlert} 
         />
       )}
+
+      <style>{`
+        .chart-path-animation {
+          stroke-dasharray: 1000;
+          stroke-dashoffset: 1000;
+          animation: draw-chart 2s ease-out forwards;
+        }
+        @keyframes draw-chart {
+          to { stroke-dashoffset: 0; }
+        }
+      `}</style>
     </div>
   );
 };
