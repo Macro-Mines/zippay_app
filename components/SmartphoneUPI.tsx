@@ -18,6 +18,7 @@ interface Props {
 }
 
 type ChartType = 'Area' | 'Line' | 'Columns' | 'Step-Line' | 'Candles' | 'Trend Analysis';
+type SortType = 'date-desc' | 'date-asc' | 'amt-desc' | 'amt-asc';
 
 const SmartphoneUPI: React.FC<Props> = ({ 
   userWallet, 
@@ -38,6 +39,7 @@ const SmartphoneUPI: React.FC<Props> = ({
   const [time, setTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }));
   const [chartType, setChartType] = useState<ChartType>('Area');
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [sortType, setSortType] = useState<SortType>('date-desc');
 
   // Profile States
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -78,6 +80,25 @@ const SmartphoneUPI: React.FC<Props> = ({
 
     return { totalWeekly, maxDay, emergencyCount, topUpCount, autoLoadCount, avgDaily };
   }, [userWallet.transactions, prototypeData]);
+
+  const sortedTransactions = useMemo(() => {
+    return [...userWallet.transactions].sort((a, b) => {
+      if (sortType === 'date-desc') return b.timestamp - a.timestamp;
+      if (sortType === 'date-asc') return a.timestamp - b.timestamp;
+      if (sortType === 'amt-desc') return b.amount - a.amount;
+      if (sortType === 'amt-asc') return a.amount - b.amount;
+      return 0;
+    });
+  }, [userWallet.transactions, sortType]);
+
+  const toggleSort = (category: 'date' | 'amt') => {
+    haptics.lightClick();
+    if (category === 'date') {
+      setSortType(prev => prev === 'date-desc' ? 'date-asc' : 'date-desc');
+    } else {
+      setSortType(prev => prev === 'amt-desc' ? 'amt-asc' : 'amt-desc');
+    }
+  };
 
   const renderChart = () => {
     const width = 340;
@@ -241,22 +262,40 @@ const SmartphoneUPI: React.FC<Props> = ({
     return (
       <div className={`${frameClasses} animate-in slide-in-from-right duration-300 mx-auto`}>
         <div className="hidden sm:block absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-950 rounded-b-2xl z-20"></div>
-        <div className="mt-8 flex items-center gap-4 mb-6 shrink-0">
+        <div className="mt-8 flex items-center gap-4 mb-2 shrink-0">
            <button onClick={() => { haptics.lightClick(); setShowFullHistory(false); }} className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors">
              <i className="fas fa-chevron-left text-slate-300"></i>
            </button>
            <h2 className="text-xl font-bold">History</h2>
         </div>
+
+        {/* Sort Bar */}
+        <div className="flex gap-2 mb-6 shrink-0 px-1">
+          <button 
+            onClick={() => toggleSort('date')}
+            className={`text-[9px] font-black uppercase px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 ${sortType.startsWith('date') ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-500'}`}
+          >
+            <i className={`fas ${sortType === 'date-desc' ? 'fa-sort-amount-down' : (sortType === 'date-asc' ? 'fa-sort-amount-up' : 'fa-calendar')}`}></i>
+            Date
+          </button>
+          <button 
+            onClick={() => toggleSort('amt')}
+            className={`text-[9px] font-black uppercase px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 ${sortType.startsWith('amt') ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-500'}`}
+          >
+            <i className={`fas ${sortType === 'amt-desc' ? 'fa-sort-numeric-down' : (sortType === 'amt-asc' ? 'fa-sort-numeric-up' : 'fa-coins')}`}></i>
+            Amount
+          </button>
+        </div>
         
         <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-hidden pb-10">
-          {userWallet.transactions.length === 0 ? (
+          {sortedTransactions.length === 0 ? (
             <div className="flex-1 flex items-center justify-center">
                <div className="w-full border-2 border-dashed border-slate-800 rounded-[2rem] py-12 flex items-center justify-center bg-slate-900/20">
                  <p className="text-slate-600 font-bold uppercase tracking-[0.2em] text-[10px]">No Transactions</p>
                </div>
             </div>
           ) : (
-            userWallet.transactions.map(tx => (
+            sortedTransactions.map(tx => (
               <div key={tx.id} className="bg-slate-800/50 p-4 rounded-2xl flex items-center justify-between border border-slate-800/50">
                 <div className="flex items-center gap-3">
                   <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs ${tx.type === 'CREDIT' ? 'bg-green-500/10 text-green-500' : 'bg-slate-700 text-slate-400'}`}>
@@ -485,6 +524,8 @@ const SmartphoneUPI: React.FC<Props> = ({
     );
   }
 
+  const isLimitExceeded = amount && (Number(amount) > 500 || (userWallet.balance + Number(amount) > 500));
+
   return (
     <div className={`${frameClasses} mx-auto`}>
       {showAI && <AIAssistant state={fullState} onClose={() => setShowAI(false)} />}
@@ -601,9 +642,14 @@ const SmartphoneUPI: React.FC<Props> = ({
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
-                className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-3 pl-8 pr-4 text-sm font-bold focus:outline-none focus:border-indigo-600 transition-all placeholder:text-slate-800 text-white"
+                className={`w-full bg-slate-950 border rounded-2xl py-3 pl-8 pr-4 text-sm font-bold focus:outline-none transition-all placeholder:text-slate-800 text-white ${isLimitExceeded ? 'border-red-500' : 'border-slate-800 focus:border-indigo-600'}`}
               />
             </div>
+            {isLimitExceeded && (
+              <p className="text-[9px] text-red-500 font-bold ml-1 animate-pulse">
+                {Number(amount) > 500 ? "Transaction limit is ₹500" : "Wallet balance cannot exceed ₹500"}
+              </p>
+            )}
             <div className="flex gap-3">
               <button 
                 onClick={() => {
@@ -611,8 +657,8 @@ const SmartphoneUPI: React.FC<Props> = ({
                   onLoadMoney(Number(amount));
                   setAmount('');
                 }}
-                disabled={!isLoadReady || !amount}
-                className={`flex-1 py-3.5 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all shadow-lg flex items-center justify-center gap-2 ${isLoadReady && amount ? 'bg-indigo-600 text-white hover:bg-indigo-500 active:scale-95' : 'bg-slate-800 text-slate-600 cursor-not-allowed'}`}
+                disabled={!isLoadReady || !amount || isLimitExceeded}
+                className={`flex-1 py-3.5 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all shadow-lg flex items-center justify-center gap-2 ${isLoadReady && amount && !isLimitExceeded ? 'bg-indigo-600 text-white hover:bg-indigo-500 active:scale-95' : 'bg-slate-800 text-slate-600 cursor-not-allowed'}`}
               >
                 <i className="fas fa-plus-circle"></i> Load
               </button>

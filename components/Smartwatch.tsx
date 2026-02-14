@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { GlobalState, NotificationType } from '../types';
 import { haptics } from '../utils/haptics';
 
@@ -13,12 +13,15 @@ interface Props {
   onPayInitiated?: (amount: number) => void;
 }
 
+type SortType = 'date-desc' | 'date-asc' | 'amt-desc' | 'amt-asc';
+
 const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConnected, watchAlert, onToggleActive, onProcessPayment, onPayInitiated }) => {
   const [time, setTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }));
   const [showHistory, setShowHistory] = useState(false);
   const [showManualPay, setShowManualPay] = useState(false);
   const [manualAmount, setManualAmount] = useState('');
   const [shakeClass, setShakeClass] = useState('');
+  const [sortType, setSortType] = useState<SortType>('date-desc');
   
   const prevActiveRef = useRef(userWallet.isActive);
   const prevAlertRef = useRef(watchAlert);
@@ -75,6 +78,25 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
       onPayInitiated(amt);
       setManualAmount('');
       setShowManualPay(false);
+    }
+  };
+
+  const sortedTransactions = useMemo(() => {
+    return [...userWallet.pendingSync].sort((a, b) => {
+      if (sortType === 'date-desc') return b.timestamp - a.timestamp;
+      if (sortType === 'date-asc') return a.timestamp - b.timestamp;
+      if (sortType === 'amt-desc') return b.amount - a.amount;
+      if (sortType === 'amt-asc') return a.amount - b.amount;
+      return 0;
+    });
+  }, [userWallet.pendingSync, sortType]);
+
+  const toggleSort = (category: 'date' | 'amt') => {
+    haptics.lightClick();
+    if (category === 'date') {
+      setSortType(prev => prev === 'date-desc' ? 'date-asc' : 'date-desc');
+    } else {
+      setSortType(prev => prev === 'amt-desc' ? 'amt-asc' : 'amt-desc');
     }
   };
 
@@ -149,15 +171,34 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
             </div>
           ) : showHistory ? (
             <div className="flex flex-col items-center w-full h-full mt-12 px-2 animate-in slide-in-from-bottom duration-300">
-               <div className="flex justify-between items-center w-full mb-2">
+               <div className="flex justify-between items-center w-full mb-1">
                  <p className="text-[9px] font-bold text-slate-500 uppercase">History</p>
                  <button onClick={() => setShowHistory(false)} className="text-[10px] text-indigo-400 font-bold uppercase">Back</button>
                </div>
+               
+               {/* Sort Controls */}
+               <div className="flex gap-2 mb-2">
+                 <button 
+                    onClick={() => toggleSort('date')}
+                    className={`text-[7px] font-black uppercase px-2 py-1 rounded-full border transition-all ${sortType.startsWith('date') ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-500'}`}
+                  >
+                   <i className={`fas ${sortType === 'date-desc' ? 'fa-sort-amount-down' : (sortType === 'date-asc' ? 'fa-sort-amount-up' : 'fa-clock')} mr-1`}></i>
+                   Date
+                 </button>
+                 <button 
+                    onClick={() => toggleSort('amt')}
+                    className={`text-[7px] font-black uppercase px-2 py-1 rounded-full border transition-all ${sortType.startsWith('amt') ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-500'}`}
+                  >
+                   <i className={`fas ${sortType === 'amt-desc' ? 'fa-sort-numeric-down' : (sortType === 'amt-asc' ? 'fa-sort-numeric-up' : 'fa-coins')} mr-1`}></i>
+                   Amount
+                 </button>
+               </div>
+
                <div className="w-full flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-1 pb-10">
-                 {userWallet.pendingSync.length === 0 ? (
+                 {sortedTransactions.length === 0 ? (
                    <p className="text-[9px] text-slate-600 py-8 font-bold uppercase tracking-widest">No local transactions</p>
                  ) : (
-                   userWallet.pendingSync.map(tx => (
+                   sortedTransactions.map(tx => (
                      <div key={tx.id} className="flex justify-between items-center bg-slate-800/40 p-2 rounded-lg border border-slate-700/50">
                         <div className="text-left">
                           <p className="text-[9px] font-bold truncate max-w-[80px]">{tx.peer}</p>
