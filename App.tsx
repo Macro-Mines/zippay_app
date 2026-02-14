@@ -305,6 +305,33 @@ const App: React.FC = () => {
     triggerWatchAlert(isEmergency ? "EMERGENCY PAID" : "PAID SUCCESS", 'success');
   };
 
+  const handlePayInitiated = (amount: number) => {
+    if (!state.merchantWallet.isActive) {
+      return triggerWatchAlert("NO MERCHANT", 'error');
+    }
+
+    if (amount > 200) {
+      return triggerWatchAlert("LIMIT: ₹200", 'error');
+    }
+
+    if (state.userWallet.balance < 0) {
+      return triggerWatchAlert("DEBT PENDING", 'error');
+    }
+    
+    // Simulate a request from the user side
+    setState(prev => ({
+      ...prev,
+      pendingPaymentRequest: {
+        from: "Local Merchant",
+        amount,
+        timestamp: Date.now()
+      }
+    }));
+    
+    // Directly process it if watch is active
+    processPayment(true);
+  };
+
   const syncWatch = () => {
     if (!state.connectivity.isBluetoothOn) {
       triggerPhoneAlert("Bluetooth connection required to sync history.", 'error');
@@ -391,6 +418,7 @@ const App: React.FC = () => {
               watchAlert={watchAlert}
               onToggleActive={toggleUserActive}
               onProcessPayment={processPayment}
+              onPayInitiated={handlePayInitiated}
             />
           )}
 

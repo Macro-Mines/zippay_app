@@ -7,6 +7,8 @@ To make small-value transactions (micro-payments) as fast as a "ZiP" by moving t
 
 ## ✨ Core Features
 - **Smartwatch Interface**: A realistic circular Wear OS-style watch face for approving payments and checking local balances.
+- **Spending Analytics (New)**: Interactive "Spending Insights" dashboard with 6 different chart types (Area, Candles, Trend, etc.) and a deep-dive statistical analysis overlay featuring a high-contrast Pie Chart.
+- **Identity & Bank Linking (New)**: User profile section for linking phone numbers to bank accounts, featuring dynamic avatar generation and VPA management.
 - **Micro-Payment Limit**: Specialized for small transactions (up to ₹200) to minimize risk.
 - **Offline Capability**: Allows up to 5 transactions on the watch without an active internet connection.
 - **Auto-Reload (Rule-Based)**: Automatically tops up the watch wallet from the bank when the balance drops below ₹50.
@@ -17,6 +19,7 @@ To make small-value transactions (micro-payments) as fast as a "ZiP" by moving t
 ## 🛠 Tech Stack
 - **React 19**: Modern component-based architecture.
 - **Tailwind CSS**: For high-performance, responsive UI styling.
+- **SVG Visualizations**: Custom path animations and interaction logic for financial charts.
 - **Web Audio API**: Real-time sound synthesis for transaction feedback.
 - **Vibration API**: Tactile haptic feedback simulation.
 - **Local Storage**: Persistence of wallet balances and transaction history across sessions.

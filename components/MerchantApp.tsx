@@ -29,7 +29,7 @@ const MerchantApp: React.FC<Props> = ({
   };
 
   return (
-    <div className="w-full sm:max-w-sm bg-slate-900 sm:border border-slate-800 sm:rounded-3xl pt-5 px-5 pb-3 shadow-2xl relative overflow-hidden flex flex-col h-[580px] mb-8 mx-auto transition-all">
+    <div className="w-full sm:max-w-sm bg-slate-900 sm:border border-slate-800 sm:rounded-3xl pt-5 px-5 pb-3 shadow-2xl relative overflow-hidden flex flex-col h-[620px] mb-8 mx-auto transition-all">
       
       {/* Top Bar with Automatic Detection Logic */}
       <div className="flex justify-between items-start mb-4 shrink-0">
@@ -105,6 +105,16 @@ const MerchantApp: React.FC<Props> = ({
              <span className="text-[11px] font-black text-slate-300 truncate tracking-tight">₹{wallet.bankBalance.toLocaleString()}</span>
           </div>
         </div>
+      </div>
+
+      {/* Merchant Information Footer */}
+      <div className="mt-auto pt-4 pb-2 border-t border-slate-800/50 flex flex-col items-center">
+         <div className="flex items-center gap-2 mb-0.5">
+            <i className="fas fa-store text-slate-600 text-[10px]"></i>
+            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Store Verified</span>
+         </div>
+         <p className="text-[11px] font-black text-slate-300 tracking-tight">Local Merchant</p>
+         <p className="text-[8px] font-bold text-slate-600 tracking-tighter">POS Terminal ID: #ZIP-8829-TERM-01</p>
       </div>
 
       {/* Local Terminal Notification */}

@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { GlobalState, NotificationType } from '../types';
+import { haptics } from '../utils/haptics';
 
 interface Props {
   userWallet: GlobalState['userWallet'];
@@ -9,11 +10,14 @@ interface Props {
   watchAlert: { message: string; type: NotificationType } | null;
   onToggleActive: () => void;
   onProcessPayment: (approve: boolean) => void;
+  onPayInitiated?: (amount: number) => void;
 }
 
-const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConnected, watchAlert, onToggleActive, onProcessPayment }) => {
+const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConnected, watchAlert, onToggleActive, onProcessPayment, onPayInitiated }) => {
   const [time, setTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }));
   const [showHistory, setShowHistory] = useState(false);
+  const [showManualPay, setShowManualPay] = useState(false);
+  const [manualAmount, setManualAmount] = useState('');
   const [shakeClass, setShakeClass] = useState('');
   
   const prevActiveRef = useRef(userWallet.isActive);
@@ -54,6 +58,25 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
 
   const isEmergency = pendingRequest && userWallet.balance < pendingRequest.amount;
   const emergencyFee = pendingRequest ? (pendingRequest.amount * 0.04) : 0;
+
+  const handleManualKey = (val: string) => {
+    haptics.lightClick();
+    if (val === 'C') {
+      setManualAmount('');
+      return;
+    }
+    if (manualAmount.length >= 4) return;
+    setManualAmount(prev => prev + val);
+  };
+
+  const handleManualPayAction = () => {
+    const amt = Number(manualAmount);
+    if (amt > 0 && onPayInitiated) {
+      onPayInitiated(amt);
+      setManualAmount('');
+      setShowManualPay(false);
+    }
+  };
 
   return (
     <div className="relative flex flex-col items-center py-4 scale-[1.02] xs:scale-[1.2] transition-transform origin-center">
@@ -146,11 +169,56 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
                  )}
                </div>
             </div>
+          ) : showManualPay ? (
+            <div className="flex flex-col items-center w-full h-full pt-8 px-1 animate-in slide-in-from-bottom duration-300 relative justify-center scale-[0.8] origin-center">
+               {/* Close Button shifted 40px further right and size increased */}
+               <div className="absolute top-1/2 -translate-y-1/2 right-[-40px] z-30">
+                  <button 
+                    onClick={() => { setShowManualPay(false); setManualAmount(''); haptics.lightClick(); }} 
+                    className="w-12 h-12 flex items-center justify-center text-slate-400 hover:text-white transition-colors bg-slate-800/40 rounded-full border border-slate-700/50 shadow-lg"
+                  >
+                    <i className="fas fa-times text-xl"></i>
+                  </button>
+               </div>
+               
+               {/* Input Display */}
+               <div className="bg-slate-950/80 rounded-xl px-4 py-2 mb-2 border border-slate-800 flex items-center justify-center w-4/5 shadow-inner">
+                  <span className="text-2xl font-black text-indigo-400">₹{manualAmount || '0'}</span>
+               </div>
+
+               {/* Keypad Grid optimized for circular frame */}
+               <div className="grid grid-cols-3 gap-1 w-full max-w-[170px]">
+                  {['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '.', 'C'].map(k => (
+                    <button 
+                      key={k} 
+                      onClick={() => handleManualKey(k)}
+                      className="h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-black text-slate-200 border border-slate-700/30 active:scale-95 transition-all shadow-sm"
+                    >
+                      {k}
+                    </button>
+                  ))}
+               </div>
+
+               {/* Pay Button */}
+               <button 
+                onClick={handleManualPayAction}
+                disabled={!manualAmount || Number(manualAmount) === 0}
+                className={`mt-2 w-full max-w-[170px] py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${manualAmount && Number(manualAmount) > 0 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 active:scale-[0.98]' : 'bg-slate-800 text-slate-600 cursor-not-allowed'}`}
+               >
+                 ZiP PAY
+               </button>
+
+               {/* Merchant Connection Footer */}
+               <div className="mt-2 text-center">
+                  <p className="text-[6px] font-black text-slate-600 uppercase tracking-tighter">Connected To</p>
+                  <p className="text-[8px] font-black text-slate-400 truncate max-w-[140px]">Local Merchant (#ZIP-8829)</p>
+               </div>
+            </div>
           ) : (
             <>
               <div 
                 className="mt-6 cursor-pointer active:scale-95 transition-transform flex flex-col items-center" 
-                onClick={() => setShowHistory(true)}
+                onClick={() => { haptics.lightClick(); setShowHistory(true); }}
                 title="Tap for history"
               >
                 <div className="flex flex-col items-center gap-1 mb-2">
@@ -183,6 +251,15 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
                     className={`w-1.5 h-1.5 rounded-full ${i < userWallet.offlineCount ? 'bg-indigo-500' : 'bg-slate-700'}`}
                   ></div>
                 ))}
+              </div>
+
+              {/* Swipe Up Gesture Visual Trigger */}
+              <div 
+                className="absolute bottom-1 flex flex-col items-center gap-0.5 cursor-pointer group pb-1 w-full"
+                onClick={() => { haptics.mediumClick(); setShowManualPay(true); }}
+              >
+                 <i className="fas fa-chevron-up text-[8px] text-indigo-400/50 group-hover:text-indigo-400 animate-bounce"></i>
+                 <span className="text-[7px] font-black text-indigo-500/50 uppercase tracking-widest group-hover:text-indigo-400">Swipe Up to Pay</span>
               </div>
             </>
           )}
