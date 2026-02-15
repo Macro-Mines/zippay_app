@@ -1,10 +1,11 @@
 
 # ZiPPaY ⚡️
 
-> **A high-fidelity, offline-first smartwatch micro-payment prototype powered by React 19 and Google Gemini AI.**
+> **A high-fidelity, offline-first smartwatch micro-payment prototype powered by React 19, Spline 3D, and Google Gemini AI.**
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/react-v19.0-61dafb.svg)
+![Spline](https://img.shields.io/badge/3D-Spline-pink.svg)
 ![Gemini](https://img.shields.io/badge/AI-Google%20Gemini-8e75ff.svg)
 ![Status](https://img.shields.io/badge/status-prototype-orange.svg)
 
@@ -24,7 +25,8 @@ The primary hub for managing funds, analyzing spending, and configuring the wear
 *   **Accessibility**: "Blind Mode" toggle that activates full Voice Control.
 
 ### 2. Smartwatch Interface (The Transaction Edge)
-A realistic Wear OS simulation designed for 1-tap micro-payments.
+A realistic Wear OS simulation designed for 1-tap micro-payments, featuring an **interactive 3D Spline model**.
+*   **3D Visualization**: High-fidelity 3D watch model powered by Spline for immersive realism.
 *   **Circular UI**: Optimized for round displays with gesture support (Swipe up to pay).
 *   **Offline Mode**: Stores up to 5 transactions locally when disconnected from the phone.
 *   **Haptic Feedback**: Distinct vibration patterns for success, error, and alerts.
@@ -130,6 +132,7 @@ graph TD
 ## 💻 Tech Stack
 
 *   **Framework**: React 19 (Hooks, Context, Refs)
+*   **3D Graphics**: Spline (`@splinetool/react-spline`)
 *   **Styling**: Tailwind CSS (Animation utilities, Gradients)
 *   **AI**: Google GenAI SDK (`@google/genai`)
 *   **Audio**: Web Audio API (Oscillators for custom UI sounds)

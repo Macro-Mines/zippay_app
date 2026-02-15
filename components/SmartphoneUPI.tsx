@@ -812,7 +812,7 @@ const SmartphoneUPI: React.FC<Props> = ({
       </div>
 
       {/* Main Content Area - Swipe up scrollable */}
-      <div className="flex-1 overflow-y-auto scrollbar-hidden space-y-6 pb-20">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hidden space-y-6 pb-20">
         {/* Wallet Balance Card */}
         <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-[2rem] p-6 shadow-xl shadow-indigo-500/20 relative overflow-hidden group shrink-0">
           <div className="absolute -right-6 -top-6 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all"></div>
