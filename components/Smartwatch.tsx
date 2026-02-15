@@ -127,7 +127,15 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
         source.start();
       }
     } catch (e) {
-      console.error("TTS Error:", e);
+      console.error("Gemini TTS Error (Quota/Network), switching to native fallback:", e);
+      // Fallback to browser's native TTS
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel(); // Stop any previous speech
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.9; // Slightly slower for clarity
+        utterance.pitch = 1;
+        window.speechSynthesis.speak(utterance);
+      }
     }
   };
 
@@ -197,7 +205,7 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
           {watchAlert ? (
             <div className="animate-in zoom-in duration-300 flex flex-col items-center justify-center gap-3 w-full h-full bg-slate-950/40 absolute inset-0 z-[30] rounded-full">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center ${watchAlert.type === 'error' ? 'bg-red-500/20 text-red-500' : 'bg-green-500/20 text-green-500'}`}>
-                <i className={`fas ${watchAlert.type === 'error' ? 'fa-exclamation-circle' : 'fa-check-circle'} text-xl`}></i>
+                <i className={`fas ${watchAlert.type === 'error' ? 'fa-exclamation-triangle' : 'fa-check-circle'} text-xl`}></i>
               </div>
               <p className={`text-[11px] font-black uppercase tracking-widest px-8 leading-tight ${watchAlert.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>
                 {watchAlert.message}

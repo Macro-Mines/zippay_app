@@ -33,6 +33,8 @@ export interface GlobalState {
     isAutoReloadEnabled: boolean;
     dailyLimit: number; // New: Daily spending limit
     dailySpent: number; // New: Amount spent today
+    geoStatus: 'safe' | 'risk' | 'scanning'; // New: Geo-Compliance Status
+    currentLocation: string; // New: Current Location Name
   };
   merchantWallet: {
     balance: number;

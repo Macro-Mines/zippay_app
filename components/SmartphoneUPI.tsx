@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { GlobalState, Transaction, NotificationType } from '../types';
 import NotificationOverlay from './NotificationOverlay';
 import AIAssistant from './AIAssistant';
@@ -15,6 +15,7 @@ interface Props {
   onToggleConnectivity: (type: 'bluetooth' | 'wifi', value: boolean) => void;
   onToggleAutoReload: (enabled: boolean) => void;
   onSetDailyLimit: (limit: number) => void;
+  onUpdateGeoStatus: (status: 'safe' | 'risk' | 'scanning', location: string) => void;
   onCloseAlert: () => void;
   fullState: GlobalState;
 }
@@ -61,6 +62,7 @@ const SmartphoneUPI: React.FC<Props> = ({
   onToggleConnectivity,
   onToggleAutoReload,
   onSetDailyLimit,
+  onUpdateGeoStatus,
   onCloseAlert,
   fullState
 }) => {
@@ -82,12 +84,95 @@ const SmartphoneUPI: React.FC<Props> = ({
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isLinked, setIsLinked] = useState(false);
 
+  // Draggable Map State
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dotPos, setDotPos] = useState({ x: 50, y: 50 }); // Percentage center
+
   useEffect(() => {
     const timer = setInterval(() => {
       setTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }));
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Map Drag Logic
+  useEffect(() => {
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+        if (!isDragging || !mapRef.current) return;
+        
+        // Prevent scrolling on touch devices while dragging the map dot
+        if(e.cancelable) e.preventDefault();
+
+        const rect = mapRef.current.getBoundingClientRect();
+        const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
+        
+        // Calculate percentage position
+        let x = ((clientX - rect.left) / rect.width) * 100;
+        let y = ((clientY - rect.top) / rect.height) * 100;
+        
+        // Clamp to map bounds
+        x = Math.max(0, Math.min(100, x));
+        y = Math.max(0, Math.min(100, y));
+        
+        setDotPos({ x, y });
+        
+        // Collision Detection with Risk Zones (Percentage based)
+        // Zone 1: Sanctioned Zone (Top Left) -> Center approx x:20, y:30
+        const dist1 = Math.sqrt(Math.pow(x - 20, 2) + Math.pow(y - 30, 2));
+        
+        // Zone 2: High Risk (Bottom Right) -> Center approx x:80, y:70
+        const dist2 = Math.sqrt(Math.pow(x - 80, 2) + Math.pow(y - 70, 2));
+        
+        const hitThreshold = 15; // 15% radius roughly matches visual
+
+        if (dist1 < hitThreshold) {
+             if (userWallet.geoStatus !== 'risk') {
+                 haptics.errorPulse();
+                 onUpdateGeoStatus('risk', 'Sanctioned Zone (North)');
+             }
+        } else if (dist2 < hitThreshold) {
+             if (userWallet.geoStatus !== 'risk') {
+                 haptics.errorPulse();
+                 onUpdateGeoStatus('risk', 'High Risk Sector');
+             }
+        } else {
+             if (userWallet.geoStatus !== 'safe') {
+                 haptics.successPulse();
+                 onUpdateGeoStatus('safe', 'PONDICHERRY UNIVERSITY');
+             }
+        }
+    };
+    
+    const handleUp = () => {
+        setIsDragging(false);
+    };
+
+    if (isDragging) {
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleUp);
+        window.addEventListener('touchmove', handleMove, { passive: false });
+        window.addEventListener('touchend', handleUp);
+    }
+    
+    return () => {
+        window.removeEventListener('mousemove', handleMove);
+        window.removeEventListener('mouseup', handleUp);
+        window.removeEventListener('touchmove', handleMove);
+        window.removeEventListener('touchend', handleUp);
+    };
+  }, [isDragging, userWallet.geoStatus, onUpdateGeoStatus]);
+
+  // Initial Geo Check (Simulated for Prototype)
+  useEffect(() => {
+    // Determine initial status - default to Safe/Pondicherry
+    onUpdateGeoStatus('safe', 'PONDICHERRY UNIVERSITY');
+  }, []);
+
+  const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsDragging(true);
+  };
 
   const isWatchLinked = connectivity.isBluetoothOn && userWallet.isActive;
   const isLoadReady = connectivity.isWifiOn && isWatchLinked;
@@ -180,7 +265,15 @@ const SmartphoneUPI: React.FC<Props> = ({
         source.start();
       }
     } catch (e) {
-      console.error("TTS Error:", e);
+      console.error("Gemini TTS Error (Quota/Network), switching to native fallback:", e);
+      // Fallback to browser's native TTS
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel(); // Stop any previous speech
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.9; // Slightly slower for clarity
+        utterance.pitch = 1;
+        window.speechSynthesis.speak(utterance);
+      }
     }
   };
 
@@ -482,7 +575,6 @@ const SmartphoneUPI: React.FC<Props> = ({
 
   // Spending Analysis View Overlay
   if (showAnalysis) {
-    // ... existing content (omitted for brevity as no changes requested in this view)
     const total = analysisStats.totalWeekly;
     const contrastColors = ['#6366f1', '#f43f5e', '#10b981', '#f59e0b', '#0ea5e9', '#8b5cf6', '#d946ef'];
     const slices = prototypeData.map((d, i) => ({
@@ -579,10 +671,8 @@ const SmartphoneUPI: React.FC<Props> = ({
 
   // User Profile View Overlay (omitted for brevity)
   if (showProfile) {
-    // ... existing profile content
     return (
       <div className={`${frameClasses} animate-in slide-in-from-left duration-300 mx-auto`}>
-        {/* ... (Existing Profile JSX) ... */}
         <div className="hidden sm:block absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-950 rounded-b-2xl z-20"></div>
         <div className="mt-8 flex items-center gap-4 mb-10 shrink-0">
            <button onClick={() => { haptics.lightClick(); setShowProfile(false); }} className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors">
@@ -905,6 +995,78 @@ const SmartphoneUPI: React.FC<Props> = ({
                Analyze Your Spending
              </button>
           </div>
+        </div>
+
+        {/* Geo-Compliance Fencing Map View */}
+        <div className="px-1 shrink-0 -mx-4 sm:-mx-6 mb-6">
+           <div className="flex justify-between items-center mb-3 px-4 sm:px-6">
+              <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Geo-Compliance Fencing</h4>
+              <button 
+                className={`text-[8px] font-bold px-2 py-1 rounded-full border transition-all flex items-center gap-1.5 ${userWallet.geoStatus === 'scanning' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : (userWallet.geoStatus === 'risk' ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20')}`}
+              >
+                 <i className={`fas ${userWallet.geoStatus === 'scanning' ? 'fa-sync fa-spin' : (userWallet.geoStatus === 'risk' ? 'fa-exclamation-triangle' : 'fa-satellite-dish')}`}></i>
+                 {userWallet.geoStatus === 'scanning' ? 'Scanning...' : (userWallet.geoStatus === 'risk' ? 'Prohibited Zone' : 'Active & Safe')}
+              </button>
+           </div>
+           
+           <div 
+             ref={mapRef}
+             className="bg-slate-900 rounded-[2.5rem] h-44 relative overflow-hidden border border-slate-800 shadow-inner group w-full cursor-crosshair select-none"
+             onMouseDown={handleMouseDown}
+             onTouchStart={handleMouseDown}
+           >
+              {/* Dummy Map SVG Background */}
+              <div className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity pointer-events-none">
+                <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="0.5" className="text-slate-500"/>
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" fill="url(#grid)" />
+                  <path d="M0 80 Q 50 90, 100 80 T 200 80 T 300 100 T 400 80" stroke="currentColor" strokeWidth="1.5" fill="none" className="text-slate-600" />
+                  <path d="M80 0 Q 90 50, 80 100 T 100 200" stroke="currentColor" strokeWidth="1.5" fill="none" className="text-slate-600" />
+                  <path d="M250 0 Q 240 50, 250 100 T 230 200" stroke="currentColor" strokeWidth="1.5" fill="none" className="text-slate-600" />
+                </svg>
+              </div>
+
+              {/* Red Zones (High Risk) - Positioning using % for collision match */}
+              {/* Zone 1: Center approx 20%, 30% */}
+              <div className="absolute flex flex-col items-center pointer-events-none" style={{ left: '20%', top: '30%', transform: 'translate(-50%, -50%)' }}>
+                 <div className="w-20 h-20 rounded-full border border-red-500/30 bg-red-500/10 flex items-center justify-center animate-pulse">
+                    <div className="w-10 h-10 rounded-full bg-red-500/20"></div>
+                 </div>
+                 <span className="text-[7px] font-black text-red-500/50 uppercase mt-1">Sanctioned Zone</span>
+              </div>
+              
+              {/* Zone 2: Center approx 80%, 70% */}
+              <div className="absolute flex flex-col items-center pointer-events-none" style={{ left: '80%', top: '70%', transform: 'translate(-50%, -50%)' }}>
+                 <div className="w-16 h-16 rounded-full border border-red-500/30 bg-red-500/10 flex items-center justify-center animate-pulse delay-700"></div>
+                 <span className="text-[7px] font-black text-red-500/50 uppercase mt-1">High Risk</span>
+              </div>
+
+              {/* User Location Dot (Draggable) */}
+              <div 
+                className={`absolute flex flex-col items-center z-10 transition-transform duration-75 ${isDragging ? 'scale-110 cursor-grabbing' : 'cursor-grab'}`}
+                style={{ left: `${dotPos.x}%`, top: `${dotPos.y}%`, transform: 'translate(-50%, -50%)' }}
+              >
+                 <div className="relative w-4 h-4 flex items-center justify-center">
+                    <div className={`absolute inset-0 rounded-full animate-ping ${userWallet.geoStatus === 'risk' ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                    <div className={`relative w-2.5 h-2.5 rounded-full shadow-lg border border-slate-900 ${userWallet.geoStatus === 'risk' ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                 </div>
+                 <div className="mt-3 bg-slate-950/80 backdrop-blur px-2 py-1 rounded-lg border border-slate-700 flex items-center gap-1.5 shadow-xl pointer-events-none">
+                    <i className={`fas ${userWallet.geoStatus === 'risk' ? 'fa-ban text-red-400' : 'fa-check-circle text-green-400'} text-[9px]`}></i>
+                    <span className="text-[8px] font-bold text-slate-200 whitespace-nowrap">{userWallet.currentLocation}</span>
+                 </div>
+                 {/* Helper text for dragging */}
+                 {userWallet.geoStatus === 'safe' && !isDragging && (
+                    <span className="absolute -top-6 text-[7px] font-bold text-slate-500 bg-slate-900/80 px-1.5 py-0.5 rounded whitespace-nowrap">Drag Me</span>
+                 )}
+              </div>
+              
+              {/* Overlay Vignette */}
+              <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,_transparent_20%,_rgba(15,23,42,0.6)_100%)]"></div>
+           </div>
         </div>
 
         {/* Recent Activity Section */}

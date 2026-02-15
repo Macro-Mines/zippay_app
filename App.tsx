@@ -20,6 +20,8 @@ const initialState: GlobalState = {
     isAutoReloadEnabled: false,
     dailyLimit: 2000,
     dailySpent: 0,
+    geoStatus: 'scanning',
+    currentLocation: 'Locating...',
   },
   merchantWallet: {
     balance: 0,
@@ -50,6 +52,10 @@ const App: React.FC = () => {
         if (parsed.userWallet.dailyLimit === undefined) {
           parsed.userWallet.dailyLimit = 2000;
           parsed.userWallet.dailySpent = 0;
+        }
+        if (parsed.userWallet.geoStatus === undefined) {
+          parsed.userWallet.geoStatus = 'scanning';
+          parsed.userWallet.currentLocation = 'Locating...';
         }
       }
       return parsed;
@@ -127,12 +133,33 @@ const App: React.FC = () => {
     triggerPhoneAlert(`Daily spending limit set to ₹${limit}`, 'success');
   };
 
+  // Geo-Compliance Update Handler
+  const handleUpdateGeoStatus = (status: 'safe' | 'risk' | 'scanning', location: string) => {
+    setState(prev => ({
+      ...prev,
+      userWallet: {
+        ...prev.userWallet,
+        geoStatus: status,
+        currentLocation: location
+      }
+    }));
+  };
+
   useEffect(() => {
     const { userWallet, connectivity } = state;
     const isWatchLinked = connectivity.isBluetoothOn && userWallet.isActive;
     const isLoadReady = connectivity.isWifiOn && isWatchLinked;
 
     if (userWallet.isAutoReloadEnabled && isLoadReady && userWallet.balance < 50 && !autoReloadTriggered.current) {
+      // Geo-Compliance Check for Auto-Reload
+      if (userWallet.geoStatus === 'risk') {
+         if (!autoReloadTriggered.current) {
+             triggerPhoneAlert("Auto-Reload Skipped: High Risk Zone Detected", 'error');
+             autoReloadTriggered.current = true; // Prevent spamming
+         }
+         return;
+      }
+
       autoReloadTriggered.current = true;
       const reloadAmount = 200 - userWallet.balance;
       
@@ -166,7 +193,7 @@ const App: React.FC = () => {
         autoReloadTriggered.current = false;
       }
     }
-  }, [state.userWallet.balance, state.userWallet.isActive, state.connectivity, state.userWallet.isAutoReloadEnabled, triggerWatchAlert, triggerPhoneAlert]);
+  }, [state.userWallet.balance, state.userWallet.isActive, state.connectivity, state.userWallet.isAutoReloadEnabled, state.userWallet.geoStatus, triggerWatchAlert, triggerPhoneAlert]);
 
   const toggleUserActive = () => {
     const newState = !state.userWallet.isActive;
@@ -195,6 +222,12 @@ const App: React.FC = () => {
     if (!state.userWallet.isActive) {
       triggerPhoneAlert("Watch is inactive. Please activate it first.", 'error');
       return triggerWatchAlert("WATCH INACTIVE", 'error');
+    }
+
+    // Geo-Compliance Check
+    if (state.userWallet.geoStatus === 'risk') {
+      triggerPhoneAlert("Transaction Blocked: Prohibited Zone detected.", 'error');
+      return triggerWatchAlert("GEO RISK", 'error');
     }
 
     if (!state.connectivity.isWifiOn || !state.connectivity.isBluetoothOn) {
@@ -275,6 +308,14 @@ const App: React.FC = () => {
 
     if (!state.userWallet.isActive) {
       return triggerWatchAlert("WATCH INACTIVE", 'error');
+    }
+
+    // Geo-Compliance Check
+    if (state.userWallet.geoStatus === 'risk') {
+      setState(prev => ({ ...prev, pendingPaymentRequest: null }));
+      // Using Smartphone Alert for detailed reason as per prompt
+      triggerPhoneAlert("Non-Compliant: Prohibited Zone. Transaction Rejected.", 'error');
+      return triggerWatchAlert("GEO BLOCKED", 'error');
     }
     
     let isEmergency = false;
@@ -436,6 +477,7 @@ const App: React.FC = () => {
               onToggleConnectivity={setConnectivity}
               onToggleAutoReload={toggleAutoReload}
               onSetDailyLimit={handleSetDailyLimit}
+              onUpdateGeoStatus={handleUpdateGeoStatus}
               onCloseAlert={() => setPhoneAlert(null)}
               fullState={state}
             />
