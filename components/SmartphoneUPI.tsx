@@ -974,7 +974,7 @@ const SmartphoneUPI: React.FC<Props> = ({
              </select>
           </div>
           {/* Removed overflow-hidden to prevent tooltips from being clipped */}
-          <div className="bg-slate-800/30 rounded-[3.5rem] pt-6 px-6 pb-3 border border-slate-800/40 shadow-inner group">
+          <div className="bg-slate-800/30 rounded-[1.5rem] mx-5 pt-6 px-6 pb-3 border border-slate-800/40 shadow-inner group">
              <div className="h-24 w-full flex items-center justify-center">
                {renderChart()}
              </div>
@@ -1011,11 +1011,11 @@ const SmartphoneUPI: React.FC<Props> = ({
            
            <div 
              ref={mapRef}
-             className="bg-slate-900 rounded-[2.5rem] h-44 relative overflow-hidden border border-slate-800 shadow-inner group w-full cursor-crosshair select-none"
+             className="bg-slate-900 rounded-[1.5rem] h-44 relative overflow-hidden border border-slate-800 shadow-inner group mx-5 cursor-crosshair select-none"
              onMouseDown={handleMouseDown}
              onTouchStart={handleMouseDown}
            >
-              {/* Dummy Map SVG Background */}
+             {/* Dummy Map SVG Background */}
               <div className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity pointer-events-none">
                 <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
                   <defs>
