@@ -1,3 +1,4 @@
+
 # ZiPPaY: The Blackbox Blueprint
 
 This document contains the complete technical blueprint for the **ZiPPaY** micro-payment ecosystem. It serves as a master reference for rebuilding or extending the application.
@@ -14,6 +15,7 @@ This document contains the complete technical blueprint for the **ZiPPaY** micro
 3. **Offline Trust**: Up to **5 transactions** can be stored locally on the watch without a phone sync.
 4. **Emergency Credit**: One "Emergency ZiP" is allowed when balance is insufficient, carrying a **4% convenience fee**.
 5. **Auto-Reload**: When enabled, the system automatically refills the wallet to **₹200** if it drops below **₹50**.
+6. **Geo-Fencing**: Transactions are strictly blocked if the device coordinates collide with a defined "High Risk" or "Sanctioned" zone.
 
 ## 3. Frontend Architecture
 - **State Management**: A centralized `GlobalState` interface in `types.ts` defines the structure for wallets, connectivity, and pending requests.
@@ -34,10 +36,14 @@ This document contains the complete technical blueprint for the **ZiPPaY** micro
 - **Haptics (`utils/haptics.ts`)**: Uses `navigator.vibrate` for tactile patterns.
     - Success: `[60, 40, 60]`
     - Error: `[100, 50, 100, 50, 100]`
+- **Voice Synthesis (Dual-Layer)**:
+    - **Primary**: Google Gemini TTS (`gemini-2.5-flash-preview-tts`) for natural intonation.
+    - **Fallback**: Browser native `speechSynthesis` API if API quotas are exhausted (429 errors) or network fails.
 
 ### B. Analytics Engine
 - **Data Visualization**: Custom SVG paths rendered based on a prototype 7-day dataset.
 - **Chart Types**: `Area`, `Line`, `Columns`, `Step-Line`, `Candles`, `Trend Analysis`.
+- **Responsiveness**: Charts are hard-constrained to **280px width** to ensure zero-overflow on standard smartphone viewports.
 
 ### C. AI Integration (ZiP Coach V5)
 - **Model**: `gemini-3-pro-preview`.
@@ -53,6 +59,15 @@ This document contains the complete technical blueprint for the **ZiPPaY** micro
     7. Debt/Emergency Frequency
     8. Bank Liquidity Management
 - **Context Payload**: Injects current balances, full transaction history snippet, and connectivity status into every prompt.
+
+### D. Geo-Compliance Engine (Simulation)
+- **Mechanism**: Interactive drag-and-drop interface on the Smartphone dashboard.
+- **Coordinate System**: Percentage-based positioning (0-100%) relative to the map container.
+- **Collision Logic**: Euclidean distance calculation between the draggable user dot and fixed risk zone centers.
+    - **Zone 1 (Sanctioned)**: Centered at {x:20, y:30}.
+    - **Zone 2 (High Risk)**: Centered at {x:80, y:70}.
+    - **Threshold**: 15% radius.
+- **State Behavior**: Entering a zone triggers `geoStatus = 'risk'`, disabling the "Load" and "Pay" buttons globally. Default state is "Safe" (PONDICHERRY UNIVERSITY).
 
 ## 5. UI/UX Design System
 - **Color Palette**: Slate-950 (BG), Indigo-600 (Primary), Green-500 (Credit), Red-500 (Debt/Alert).
