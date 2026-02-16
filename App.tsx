@@ -22,6 +22,9 @@ const initialState: GlobalState = {
     dailySpent: 0,
     geoStatus: 'scanning',
     currentLocation: 'Locating...',
+    phoneNumber: '',
+    isLinked: false,
+    geoPosition: { x: 50, y: 50 }
   },
   merchantWallet: {
     balance: 0,
@@ -56,6 +59,14 @@ const App: React.FC = () => {
         if (parsed.userWallet.geoStatus === undefined) {
           parsed.userWallet.geoStatus = 'scanning';
           parsed.userWallet.currentLocation = 'Locating...';
+        }
+        // Migration for persistent profile and map
+        if (parsed.userWallet.phoneNumber === undefined) {
+          parsed.userWallet.phoneNumber = '';
+          parsed.userWallet.isLinked = false;
+        }
+        if (parsed.userWallet.geoPosition === undefined) {
+          parsed.userWallet.geoPosition = { x: 50, y: 50 };
         }
       }
       return parsed;
@@ -141,6 +152,17 @@ const App: React.FC = () => {
         ...prev.userWallet,
         geoStatus: status,
         currentLocation: location
+      }
+    }));
+  };
+
+  // Generalized Wallet Updater for Profile/Map persistence
+  const handleUpdateWallet = (updates: Partial<GlobalState['userWallet']>) => {
+    setState(prev => ({
+      ...prev,
+      userWallet: {
+        ...prev.userWallet,
+        ...updates
       }
     }));
   };
@@ -478,6 +500,7 @@ const App: React.FC = () => {
               onToggleAutoReload={toggleAutoReload}
               onSetDailyLimit={handleSetDailyLimit}
               onUpdateGeoStatus={handleUpdateGeoStatus}
+              onUpdateWallet={handleUpdateWallet}
               onCloseAlert={() => setPhoneAlert(null)}
               fullState={state}
             />

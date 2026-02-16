@@ -240,6 +240,12 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
                 </button>
                 <button 
                   onClick={() => {
+                    if (userWallet.geoStatus === 'risk') {
+                       speakText("Payment denied, You are in Prohibited Zone");
+                       // Trigger visual feedback in app
+                       onProcessPayment(true);
+                       return;
+                    }
                     if (pendingRequest) {
                       speakText(`Paid ${pendingRequest.amount} rupees to ${pendingRequest.from}`);
                     }

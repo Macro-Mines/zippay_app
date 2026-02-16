@@ -16,6 +16,7 @@ interface Props {
   onToggleAutoReload: (enabled: boolean) => void;
   onSetDailyLimit: (limit: number) => void;
   onUpdateGeoStatus: (status: 'safe' | 'risk' | 'scanning', location: string) => void;
+  onUpdateWallet: (updates: Partial<GlobalState['userWallet']>) => void;
   onCloseAlert: () => void;
   fullState: GlobalState;
 }
@@ -63,6 +64,7 @@ const SmartphoneUPI: React.FC<Props> = ({
   onToggleAutoReload,
   onSetDailyLimit,
   onUpdateGeoStatus,
+  onUpdateWallet,
   onCloseAlert,
   fullState
 }) => {
@@ -80,14 +82,18 @@ const SmartphoneUPI: React.FC<Props> = ({
   const [isEditingLimit, setIsEditingLimit] = useState(false);
   const [tempLimit, setTempLimit] = useState(userWallet.dailyLimit.toString());
 
-  // Profile States
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [isLinked, setIsLinked] = useState(false);
-
-  // Draggable Map State
+  // Draggable Map State - Local state used for smooth dragging, synced to global on end
   const mapRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [dotPos, setDotPos] = useState({ x: 50, y: 50 }); // Percentage center
+  // Initialize with global position
+  const [dotPos, setDotPos] = useState(userWallet.geoPosition); 
+
+  // Sync local dotPos if global userWallet.geoPosition changes externally (e.g. reload/reset)
+  useEffect(() => {
+    if (!isDragging) {
+      setDotPos(userWallet.geoPosition);
+    }
+  }, [userWallet.geoPosition, isDragging]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -116,7 +122,8 @@ const SmartphoneUPI: React.FC<Props> = ({
         x = Math.max(0, Math.min(100, x));
         y = Math.max(0, Math.min(100, y));
         
-        setDotPos({ x, y });
+        const newPos = { x, y };
+        setDotPos(newPos);
         
         // Collision Detection with Risk Zones (Percentage based)
         // Zone 1: Sanctioned Zone (Top Left) -> Center approx x:20, y:30
@@ -147,6 +154,8 @@ const SmartphoneUPI: React.FC<Props> = ({
     
     const handleUp = () => {
         setIsDragging(false);
+        // Persist the position to global state on drag end
+        onUpdateWallet({ geoPosition: dotPos });
     };
 
     if (isDragging) {
@@ -162,12 +171,24 @@ const SmartphoneUPI: React.FC<Props> = ({
         window.removeEventListener('touchmove', handleMove);
         window.removeEventListener('touchend', handleUp);
     };
-  }, [isDragging, userWallet.geoStatus, onUpdateGeoStatus]);
+  }, [isDragging, dotPos, userWallet.geoStatus, onUpdateGeoStatus, onUpdateWallet]);
 
   // Initial Geo Check (Simulated for Prototype)
   useEffect(() => {
-    // Determine initial status - default to Safe/Pondicherry
-    onUpdateGeoStatus('safe', 'PONDICHERRY UNIVERSITY');
+    // Determine initial status based on current persisted pos
+    // This runs on mount to ensure correct status if tab is switched back
+    const { x, y } = userWallet.geoPosition;
+    const dist1 = Math.sqrt(Math.pow(x - 20, 2) + Math.pow(y - 30, 2));
+    const dist2 = Math.sqrt(Math.pow(x - 80, 2) + Math.pow(y - 70, 2));
+    const hitThreshold = 15;
+
+    if (dist1 < hitThreshold) {
+       onUpdateGeoStatus('risk', 'Sanctioned Zone (North)');
+    } else if (dist2 < hitThreshold) {
+       onUpdateGeoStatus('risk', 'High Risk Sector');
+    } else {
+       onUpdateGeoStatus('safe', 'PONDICHERRY UNIVERSITY');
+    }
   }, []);
 
   const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
@@ -684,20 +705,20 @@ const SmartphoneUPI: React.FC<Props> = ({
            <div className="flex flex-col items-center">
               <div className="relative">
                 <div className="w-28 h-28 rounded-full bg-slate-800 border-4 border-slate-700 flex items-center justify-center overflow-hidden shadow-2xl">
-                  {isLinked ? (
-                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${phoneNumber}`} alt="Avatar" className="w-full h-full object-cover" />
+                  {userWallet.isLinked ? (
+                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userWallet.phoneNumber}`} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
                     <i className="fas fa-user text-5xl text-slate-600"></i>
                   )}
                 </div>
-                {isLinked && (
+                {userWallet.isLinked && (
                   <div className="absolute bottom-1 right-1 w-8 h-8 bg-indigo-500 rounded-full border-4 border-slate-900 flex items-center justify-center animate-in zoom-in">
                     <i className="fas fa-check text-white text-[10px]"></i>
                   </div>
                 )}
               </div>
               <div className="mt-4 text-center">
-                <h3 className="text-lg font-black text-white">{isLinked ? 'Verified Account' : 'Guest Account'}</h3>
+                <h3 className="text-lg font-black text-white">{userWallet.isLinked ? 'Verified Account' : 'Guest Account'}</h3>
                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">ZiPPaY Micro-Pay Wallet</p>
               </div>
            </div>
@@ -708,10 +729,10 @@ const SmartphoneUPI: React.FC<Props> = ({
                     <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm tracking-tight border-r border-slate-800 pr-3">+91</div>
                     <input 
                       type="tel"
-                      value={phoneNumber}
+                      value={userWallet.phoneNumber}
                       onChange={(e) => {
                         const val = e.target.value.replace(/\D/g, '').slice(0, 10);
-                        setPhoneNumber(val);
+                        onUpdateWallet({ phoneNumber: val });
                       }}
                       placeholder="00000 00000"
                       className="w-full bg-slate-950 border border-slate-800 group-hover:border-slate-700 rounded-2xl py-4 pl-16 pr-5 text-sm font-black focus:outline-none focus:border-indigo-600 transition-all text-white placeholder:text-slate-800 tracking-widest"
@@ -720,18 +741,18 @@ const SmartphoneUPI: React.FC<Props> = ({
               </div>
               <button 
                 onClick={() => {
-                  if (phoneNumber.length === 10) {
+                  if (userWallet.phoneNumber.length === 10) {
                      haptics.successPulse();
-                     setIsLinked(true);
+                     onUpdateWallet({ isLinked: true });
                   }
                 }}
-                disabled={phoneNumber.length !== 10}
-                className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-[0.25em] transition-all shadow-xl flex items-center justify-center gap-3 ${phoneNumber.length === 10 ? 'bg-indigo-600 text-white hover:bg-indigo-500 active:scale-95' : 'bg-slate-800 text-slate-700 cursor-not-allowed'}`}
+                disabled={userWallet.phoneNumber.length !== 10}
+                className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-[0.25em] transition-all shadow-xl flex items-center justify-center gap-3 ${userWallet.phoneNumber.length === 10 ? 'bg-indigo-600 text-white hover:bg-indigo-500 active:scale-95' : 'bg-slate-800 text-slate-700 cursor-not-allowed'}`}
               >
-                <i className={`fas ${isLinked ? 'fa-sync' : 'fa-link'}`}></i>
-                {isLinked ? 'Update Link' : 'Link Bank Account'}
+                <i className={`fas ${userWallet.isLinked ? 'fa-sync' : 'fa-link'}`}></i>
+                {userWallet.isLinked ? 'Update Link' : 'Link Bank Account'}
               </button>
-              {isLinked && (
+              {userWallet.isLinked && (
                 <div className="bg-slate-800/40 border border-slate-800/60 rounded-[2rem] p-6 space-y-4 animate-in slide-in-from-bottom-4 duration-500">
                    <div className="flex items-center justify-between pb-4 border-b border-slate-800/50">
                       <div className="flex items-center gap-3">
@@ -751,7 +772,7 @@ const SmartphoneUPI: React.FC<Props> = ({
                       </div>
                       <div>
                          <p className="text-[11px] font-black text-white">UPI VPA</p>
-                         <p className="text-[9px] text-slate-500 font-bold lowercase tracking-tighter">{phoneNumber}@zippay</p>
+                         <p className="text-[9px] text-slate-500 font-bold lowercase tracking-tighter">{userWallet.phoneNumber}@zippay</p>
                       </div>
                    </div>
                 </div>
@@ -778,6 +799,7 @@ const SmartphoneUPI: React.FC<Props> = ({
       <div className="flex justify-between items-center mb-4 shrink-0 px-1 mt-1">
         <span className="text-[10px] font-black text-slate-400 tracking-tight">{time}</span>
         <div className="flex items-center gap-2 text-slate-500">
+          <i className="fas fa-location-arrow text-[8px]"></i>
           <i className="fas fa-signal text-[8px]"></i>
           <div className="flex items-center gap-1">
             <span className="text-[8px] font-bold">85%</span>
@@ -800,10 +822,10 @@ const SmartphoneUPI: React.FC<Props> = ({
           </button>
           <button 
             onClick={() => { haptics.mediumClick(); setShowProfile(true); }}
-            className={`w-10 h-10 rounded-full flex items-center justify-center overflow-hidden border transition-all ${isLinked ? 'border-indigo-500 bg-indigo-500/10' : 'border-slate-700 bg-slate-800 hover:border-slate-500'}`}
+            className={`w-10 h-10 rounded-full flex items-center justify-center overflow-hidden border transition-all ${userWallet.isLinked ? 'border-indigo-500 bg-indigo-500/10' : 'border-slate-700 bg-slate-800 hover:border-slate-500'}`}
           >
-            {isLinked ? (
-              <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${phoneNumber}`} alt="User" className="w-full h-full object-cover" />
+            {userWallet.isLinked ? (
+              <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userWallet.phoneNumber}`} alt="User" className="w-full h-full object-cover" />
             ) : (
               <i className="fas fa-user text-slate-500"></i>
             )}

@@ -35,6 +35,9 @@ export interface GlobalState {
     dailySpent: number; // New: Amount spent today
     geoStatus: 'safe' | 'risk' | 'scanning'; // New: Geo-Compliance Status
     currentLocation: string; // New: Current Location Name
+    phoneNumber: string; // New: Persisted Profile Phone
+    isLinked: boolean;   // New: Persisted Profile Status
+    geoPosition: { x: number; y: number }; // New: Persisted Map Position
   };
   merchantWallet: {
     balance: number;
