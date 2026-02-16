@@ -9,7 +9,7 @@
 ![Gemini](https://img.shields.io/badge/AI-Google%20Gemini-8e75ff.svg)
 ![Status](https://img.shields.io/badge/status-prototype-orange.svg)
 
-**ZiPPaY** bridges the gap between traditional UPI apps and wearable technology. It simulates a complete ecosystem—Smartphone, Smartwatch, and Merchant Terminal—focusing on speed ("ZiP"), accessibility (Blind Mode), and reliability in low-connectivity environments.
+**ZiPPaY** bridges the gap between traditional UPI apps and wearable technology. It simulates a complete ecosystem—Smartphone, Smartwatch, and Merchant Terminal—focusing on speed ("ZiP"), accessibility, and reliability in low-connectivity environments.
 
 ---
 
@@ -22,7 +22,6 @@ The primary hub for managing funds, analyzing spending, and configuring the wear
 *   **Visual Analytics**: Interactive charts (Area, Candles, Trend Lines) powered by SVG.
 *   **AI Coach**: A Gemini-powered financial assistant that proactively analyzes spending habits and anomalies.
 *   **Wallet Management**: Load money to the watch, set daily limits, and toggle auto-reload.
-*   **Accessibility**: "Blind Mode" toggle that activates full Voice Control.
 
 ### 2. Smartwatch Interface (The Transaction Edge)
 A realistic Wear OS simulation designed for 1-tap micro-payments, featuring an **interactive 3D Spline model**.
@@ -40,19 +39,9 @@ A tablet-sized interface for vendors to initiate requests.
 
 ---
 
-## 🤖 AI & Accessibility Features
+## 🤖 AI Features
 
 ZiPPaY integrates **Google Gemini Multimodal Live API** to provide a truly inclusive financial experience.
-
-### 🗣️ Blind Mode & Voice Control
-Activated via the User Profile, this mode transforms the app into a voice-first experience.
-*   **Wake Word**: "Hey Zip"
-*   **Commands**:
-    *   _"What is my balance?"_
-    *   _"Load 200 rupees"_
-    *   _"Pay 50"_ (Context-aware: matches pending merchant requests)
-    *   _"Analyze my spending"_
-*   **Feedback**: Uses Gemini TTS (Text-to-Speech) for human-like auditory confirmation of every action.
 
 ### 🧠 Proactive AI Coach
 The AI Assistant doesn't just answer questions; it scans your `GlobalState`:
