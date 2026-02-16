@@ -24,7 +24,9 @@ const initialState: GlobalState = {
     currentLocation: 'Locating...',
     phoneNumber: '',
     isLinked: false,
-    geoPosition: { x: 50, y: 50 }
+    geoPosition: { x: 50, y: 50 },
+    greenBalance: 0,
+    treesPlanted: 3 // Starting with dummy data
   },
   merchantWallet: {
     balance: 0,
@@ -67,6 +69,11 @@ const App: React.FC = () => {
         }
         if (parsed.userWallet.geoPosition === undefined) {
           parsed.userWallet.geoPosition = { x: 50, y: 50 };
+        }
+        // Migration for Green Wallet
+        if (parsed.userWallet.greenBalance === undefined) {
+          parsed.userWallet.greenBalance = 0;
+          parsed.userWallet.treesPlanted = 3;
         }
       }
       return parsed;
@@ -342,12 +349,13 @@ const App: React.FC = () => {
     
     let isEmergency = false;
     let finalDebitAmount = request.amount;
+    let greenFee = 0;
 
     if (state.userWallet.balance < request.amount) {
       if (state.userWallet.balance >= 0) {
         isEmergency = true;
-        const fee = request.amount * 0.04;
-        finalDebitAmount = request.amount + fee;
+        greenFee = request.amount * 0.04;
+        finalDebitAmount = request.amount + greenFee;
       } else {
         return triggerWatchAlert("DEBT PENDING", 'error');
       }
@@ -378,6 +386,17 @@ const App: React.FC = () => {
       peer: 'ZiPPaY User'
     };
 
+    // Green Wallet Logic
+    const TREE_COST = 10; // Prototype cost for a tree
+    let newGreenBalance = state.userWallet.greenBalance + greenFee;
+    let newTrees = state.userWallet.treesPlanted;
+    
+    if (newGreenBalance >= TREE_COST) {
+       newTrees += Math.floor(newGreenBalance / TREE_COST);
+       newGreenBalance = newGreenBalance % TREE_COST;
+       triggerPhoneAlert("Eco-Goal Reached: You planted a new tree!", "success");
+    }
+
     setState(prev => ({
       ...prev,
       userWallet: {
@@ -386,6 +405,8 @@ const App: React.FC = () => {
         pendingSync: [tx, ...prev.userWallet.pendingSync],
         offlineCount: prev.userWallet.offlineCount + 1,
         dailySpent: prev.userWallet.dailySpent + finalDebitAmount, // Update daily spent
+        greenBalance: newGreenBalance, // Update Green Wallet
+        treesPlanted: newTrees
       },
       merchantWallet: {
         ...prev.merchantWallet,

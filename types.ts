@@ -38,6 +38,8 @@ export interface GlobalState {
     phoneNumber: string; // New: Persisted Profile Phone
     isLinked: boolean;   // New: Persisted Profile Status
     geoPosition: { x: number; y: number }; // New: Persisted Map Position
+    greenBalance: number; // New: Accumulated Emergency Fees
+    treesPlanted: number; // New: Count of trees planted via fees
   };
   merchantWallet: {
     balance: number;

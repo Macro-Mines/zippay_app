@@ -72,6 +72,7 @@ const SmartphoneUPI: React.FC<Props> = ({
   const [showFullHistory, setShowFullHistory] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showGreenWallet, setShowGreenWallet] = useState(false);
   const [showAI, setShowAI] = useState(false);
   const [time, setTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }));
   const [chartType, setChartType] = useState<ChartType>('Area');
@@ -594,6 +595,128 @@ const SmartphoneUPI: React.FC<Props> = ({
     );
   }
 
+  // Green Wallet View Overlay
+  if (showGreenWallet) {
+    const TREE_COST = 10;
+    const progressPercent = Math.min((userWallet.greenBalance / TREE_COST) * 100, 100);
+    const plantedTrees = [
+       { id: 1, x: 20, y: 30, name: "Your Tree" },
+       { id: 2, x: 60, y: 20, name: "S. Sudalaimuthu's Tree" },
+       { id: 3, x: 80, y: 60, name: "K.Usha's Tree" },
+       { id: 4, x: 30, y: 70, name: "C. P. Abdul Gafoor's Tree" },
+       { id: 5, x: 50, y: 50, name: "S.Geetha's Tree" },
+       { id: 6, x: 40, y: 20, name: "A. Balakrishnan's Tree" },
+       { id: 7, x: 50, y: 90, name: "S. Janakiraman's Tree" }
+    ];
+
+    return (
+      <div className={`${frameClasses} animate-in slide-in-from-right duration-300 mx-auto`}>
+        <div className="hidden sm:block absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-950 rounded-b-2xl z-20"></div>
+        <div className="mt-8 flex items-center justify-between mb-2 shrink-0 pr-2">
+           <div className="flex items-center gap-4">
+             <button onClick={() => { haptics.lightClick(); setShowGreenWallet(false); }} className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors">
+               <i className="fas fa-chevron-left text-slate-300"></i>
+             </button>
+             <h2 className="text-xl font-bold text-green-400">Green Wallet</h2>
+           </div>
+           <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center text-green-500 border border-green-500/20">
+             <i className="fas fa-leaf"></i>
+           </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-6 pr-1 scrollbar-hidden pb-10 mt-4">
+           {/* Header Stats */}
+           <div className="flex flex-col items-center justify-center gap-2">
+              <div className="w-24 h-24 bg-green-900/20 rounded-full flex items-center justify-center border-4 border-green-500/30 shadow-[0_0_30px_rgba(34,197,94,0.2)]">
+                 <i className="fas fa-tree text-4xl text-green-500"></i>
+              </div>
+              <h3 className="text-3xl font-black text-white">{userWallet.treesPlanted}</h3>
+              <p className="text-[10px] font-bold text-green-400 uppercase tracking-widest">Trees Planted</p>
+           </div>
+
+           {/* Progress Card */}
+           <div className="bg-slate-800/40 rounded-3xl p-6 border border-slate-700/50">
+              <div className="flex justify-between items-end mb-2">
+                 <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Next Tree Goal</p>
+                    <p className="text-lg font-black text-white">₹{userWallet.greenBalance.toFixed(2)} <span className="text-slate-500 text-xs">/ ₹{TREE_COST}</span></p>
+                 </div>
+                 <span className="text-xs font-bold text-green-400">{progressPercent.toFixed(0)}%</span>
+              </div>
+              <div className="w-full h-3 bg-slate-700 rounded-full overflow-hidden">
+                 <div className="h-full bg-green-500 transition-all duration-1000 ease-out" style={{ width: `${progressPercent}%` }}></div>
+              </div>
+              <p className="text-[9px] text-slate-500 mt-3 leading-relaxed">
+                 Every time you use <span className="text-red-400 font-bold">Emergency ZiP</span>, the 4% convenience fee is automatically donated here to help plant trees.
+              </p>
+           </div>
+
+           {/* Map Visualization */}
+           <div>
+              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 ml-2">Eco-System Map</h4>
+              <div className="bg-slate-900 rounded-[2rem] h-64 relative overflow-hidden border border-slate-800 shadow-inner group w-full">
+                 <div className="absolute inset-0 opacity-20 pointer-events-none">
+                    <svg width="100%" height="100%" viewBox="0 0 400 256" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                      <defs>
+                        <pattern id="grid-green" width="40" height="40" patternUnits="userSpaceOnUse">
+                          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#22c55e" strokeWidth="0.5" className="opacity-20"/>
+                        </pattern>
+                        <linearGradient id="terrain-fade" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#22c55e" stopOpacity="0.1"/>
+                          <stop offset="100%" stopColor="#22c55e" stopOpacity="0"/>
+                        </linearGradient>
+                      </defs>
+                      
+                      <rect width="100%" height="100%" fill="url(#grid-green)" />
+                      
+                      {/* Contour Terrain Lines */}
+                      <g className="opacity-50">
+                        {/* Base Elevation */}
+                        <path d="M -10 200 C 100 180, 200 240, 300 200 S 410 180, 410 220 V 260 H -10 Z" fill="url(#terrain-fade)" stroke="none" />
+                        <path d="M -10 200 C 100 180, 200 240, 300 200 S 410 180, 410 220" fill="none" stroke="#22c55e" strokeWidth="1" />
+
+                        {/* Mid Level */}
+                        <path d="M -10 140 C 80 120, 180 180, 280 140 S 410 100, 410 140" fill="none" stroke="#22c55e" strokeWidth="1" />
+                        <path d="M 0 160 C 90 140, 190 200, 290 160 S 400 120, 400 160" fill="none" stroke="#22c55e" strokeWidth="0.5" strokeDasharray="4 4" />
+
+                        {/* High Level Hills */}
+                        <path d="M 250 80 Q 300 40 350 80 T 300 120 T 250 80" fill="none" stroke="#22c55e" strokeWidth="1.5" />
+                        <path d="M 270 80 Q 300 60 330 80 T 300 100 T 270 80" fill="none" stroke="#22c55e" strokeWidth="0.5" />
+                        
+                        <path d="M 50 100 Q 80 70 110 100 T 80 130 T 50 100" fill="none" stroke="#22c55e" strokeWidth="1.5" />
+                        
+                        {/* Valley Line */}
+                        <path d="M 150 0 Q 180 100 150 256" fill="none" stroke="#22c55e" strokeWidth="0.5" strokeDasharray="5,5" className="opacity-50" />
+                      </g>
+                    </svg>
+                 </div>
+                 
+                 {/* Planted Trees */}
+                 {plantedTrees.map((tree, i) => (
+                    <div 
+                      key={tree.id}
+                      className="absolute flex flex-col items-center group/tree"
+                      style={{ left: `${tree.x}%`, top: `${tree.y}%`, transform: 'translate(-50%, -50%)' }}
+                    >
+                       <div className="w-8 h-8 rounded-full bg-green-500/20 border border-green-500 flex items-center justify-center shadow-[0_0_15px_rgba(34,197,94,0.4)] animate-in zoom-in duration-500" style={{ animationDelay: `${i * 100}ms` }}>
+                          <i className="fas fa-tree text-[10px] text-green-400"></i>
+                       </div>
+                       <div className="mt-1 bg-slate-900/90 px-2 py-1 rounded text-[8px] font-bold text-green-200 opacity-0 group-hover/tree:opacity-100 transition-opacity whitespace-nowrap border border-green-500/30">
+                          {tree.name}
+                       </div>
+                    </div>
+                 ))}
+                 
+                 <div className="absolute bottom-3 right-3 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800 backdrop-blur-sm">
+                    <p className="text-[8px] font-bold text-slate-400">Forest Zone A-1</p>
+                 </div>
+              </div>
+           </div>
+        </div>
+      </div>
+    );
+  }
+
   // Spending Analysis View Overlay
   if (showAnalysis) {
     const total = analysisStats.totalWeekly;
@@ -819,6 +942,12 @@ const SmartphoneUPI: React.FC<Props> = ({
             className="w-10 h-10 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all shadow-lg shadow-indigo-500/10"
           >
             <i className="fas fa-robot"></i>
+          </button>
+          <button 
+            onClick={() => { haptics.mediumClick(); setShowGreenWallet(true); }}
+            className="w-10 h-10 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center text-green-500 hover:bg-green-600 hover:text-white transition-all shadow-lg shadow-green-500/10"
+          >
+            <i className="fas fa-leaf"></i>
           </button>
           <button 
             onClick={() => { haptics.mediumClick(); setShowProfile(true); }}
