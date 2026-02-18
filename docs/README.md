@@ -1,7 +1,7 @@
 
 # ZiPPaY ⚡️
 
-> **A high-fidelity, offline-first smartwatch micro-payment prototype powered by React 19, Spline 3D, and Google Gemini AI.**
+> **A high-fidelity, offline-first smartwatch micro-payment prototype powered by React 19 and Google Gemini AI.**
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/react-v19.0-61dafb.svg)
