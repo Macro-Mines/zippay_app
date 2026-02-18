@@ -124,7 +124,7 @@ const AIAssistant: React.FC<Props> = ({ state, onClose }) => {
       `;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3-pro-preview',
+        model: 'gemini-3-flash-preview',
         contents: [
           { role: 'user', parts: [{ text: `APP CONTEXT:\n${statsContext}\n\nUSER REQUEST: ${textToSend}` }] }
         ],
