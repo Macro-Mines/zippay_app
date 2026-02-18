@@ -4,7 +4,7 @@
 This document contains the complete technical blueprint for the **ZiPPaY** micro-payment ecosystem. It serves as a master reference for rebuilding or extending the application.
 
 ## 1. Concept & Positioning
-- **Name**: ZiPPaY (Micro-Payment Sandbox)
+- **Name**: ZiPPaY (Micro-Payment System)
 - **Primary Goal**: Extreme speed for small transactions (₹1 - ₹200).
 - **Secondary Goal**: High-fidelity sensory experience simulating hardware interactions.
 - **Tertiary Goal**: Financial education through Proactive AI Coaching.
