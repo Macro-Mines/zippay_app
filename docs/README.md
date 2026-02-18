@@ -23,8 +23,7 @@ The primary hub for managing funds, analyzing spending, and configuring the wear
 *   **Wallet Management**: Load money to the watch, set daily limits, and toggle auto-reload.
 
 ### 2. Smartwatch Interface (The Transaction Edge)
-A realistic Wear OS simulation designed for 1-tap micro-payments, featuring an **interactive 3D Spline model**.
-*   **3D Visualization**: High-fidelity 3D watch model powered by Spline for immersive realism.
+A realistic Wear OS simulation designed for 1-tap micro-payments.
 *   **Circular UI**: Optimized for round displays with gesture support (Swipe up to pay).
 *   **Offline Mode**: Stores up to 5 transactions locally when disconnected from the phone.
 *   **Haptic Feedback**: Distinct vibration patterns for success, error, and alerts.
@@ -120,7 +119,6 @@ graph TD
 ## 💻 Tech Stack
 
 *   **Framework**: React 19 (Hooks, Context, Refs)
-*   **3D Graphics**: Spline (`@splinetool/react-spline`)
 *   **Styling**: Tailwind CSS (Animation utilities, Gradients)
 *   **AI**: Google GenAI SDK (`@google/genai`)
 *   **Audio**: Web Audio API (Oscillators for custom UI sounds)
