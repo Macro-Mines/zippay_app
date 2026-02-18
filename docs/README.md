@@ -5,6 +5,7 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/react-v19.0-61dafb.svg)
+![Spline](https://img.shields.io/badge/3D-Spline-pink.svg)
 ![Gemini](https://img.shields.io/badge/AI-Google%20Gemini-8e75ff.svg)
 ![Status](https://img.shields.io/badge/status-prototype-orange.svg)
 
