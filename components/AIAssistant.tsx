@@ -31,33 +31,52 @@ const AIAssistant: React.FC<Props> = ({ state, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Proactive Insights Logic
+  // Enhanced Proactive Insights Logic
   const proactiveInsights = useMemo(() => {
     const insights: string[] = [];
-    const { balance, phoneBalance, transactions } = state.userWallet;
+    const { balance, phoneBalance, transactions, dailySpent, dailyLimit } = state.userWallet;
     
+    // Balance & Critical Alerts
     if (balance < 50 && !state.userWallet.isAutoReloadEnabled) {
-      insights.push("Low ZiP balance. Consider enabling Auto-Reload to avoid payment friction.");
+      insights.push("⚠️ Low Balance Alert: You have less than ₹50. Enable Auto-Reload to stay connected.");
     }
     
     if (balance < 0) {
-      insights.push("You're in Emergency credit. Clearing this should be your top priority to avoid convenience fees.");
+      insights.push("🚨 Debt Alert: You are using Emergency Credit. Repay soon to avoid accumulating fees.");
     }
 
+    // Spending Pattern Analysis
     const recentHighSpend = transactions.slice(0, 3).some(t => t.amount > 150);
     if (recentHighSpend) {
-      insights.push("Detected high-value micro-payments recently. Want to set a daily cap?");
+      insights.push("📊 Unusual Activity: Detected multiple high-value transactions recently.");
     }
 
-    if (phoneBalance > 5000 && balance < 100) {
-      insights.push("Strong bank reserves detected. You can safely top up your ZiP wallet for convenience.");
+    if (dailySpent > dailyLimit * 0.9) {
+      insights.push(`📉 Limit Warning: You've used 90% of your daily ₹${dailyLimit} limit.`);
+    }
+
+    // Savings & Wealth Opportunities
+    if (phoneBalance > 5000 && balance < 200) {
+      insights.push("💰 Smart Move: Your bank balance is healthy. Top up ₹500 now to avoid sync fees later.");
+    }
+    
+    const weeklySpend = transactions.reduce((acc, t) => acc + t.amount, 0);
+    if (weeklySpend < 500) {
+      insights.push("🏆 Great Job: Your spending is well under control this week!");
+    } else if (weeklySpend > 2000) {
+      insights.push("💡 Tip: You've spent over ₹2000 this week. Consider analyzing your 'Tea & Snacks' category.");
+    }
+
+    // Frequency Anomaly
+    if (transactions.slice(0, 5).filter(t => Date.now() - t.timestamp < 3600000).length > 3) {
+      insights.push("⚡ High Frequency: You've made 3+ payments in the last hour. Is everything okay?");
     }
 
     return insights;
   }, [state]);
 
   useEffect(() => {
-    // Initial Greeting with Proactive Insight
+    // Initial Greeting with Random Proactive Insight
     const insight = proactiveInsights.length > 0 
       ? `\n\n**Quick Insight:** ${proactiveInsights[Math.floor(Math.random() * proactiveInsights.length)]}` 
       : "";
@@ -96,6 +115,7 @@ const AIAssistant: React.FC<Props> = ({ state, onClose }) => {
       const statsContext = `
         Current ZiP Balance: ₹${state.userWallet.balance}
         Primary Bank Balance: ₹${state.userWallet.phoneBalance}
+        Daily Spent: ₹${state.userWallet.dailySpent} (Limit: ₹${state.userWallet.dailyLimit})
         Total Synced Transactions: ${state.userWallet.transactions.length}
         Pending Syncs: ${state.userWallet.pendingSync.length}
         Recent Activity: ${state.userWallet.transactions.slice(0, 10).map(t => `${t.peer}: ₹${t.amount} (${t.type})`).join(', ')}
@@ -114,8 +134,9 @@ const AIAssistant: React.FC<Props> = ({ state, onClose }) => {
           1. PROACTIVE COACHING: Analyze patterns (e.g., frequent small spends) and suggest optimizations. Provide specific goal-setting advice for savings.
           2. GOAL SETTING: Help users set and track mini-savings goals relative to their bank balance.
           3. ANOMALY DETECTION: Flag transactions that seem unusually high or frequent compared to the average micro-payment.
-          4. TONE: Intelligent, witty, supportive, and data-driven.
-          5. CONSTRAINTS: Keep responses under 80 words. Use markdown bold for key numbers or insights.`,
+          4. SAVINGS ADVISOR: If the user has a high bank balance, suggest moving funds to savings or investments.
+          5. TONE: Intelligent, witty, supportive, and data-driven. Use emojis sparingly.
+          6. CONSTRAINTS: Keep responses under 80 words. Use markdown bold for key numbers or insights.`,
           temperature: 0.7,
         }
       });
@@ -147,7 +168,7 @@ const AIAssistant: React.FC<Props> = ({ state, onClose }) => {
           </div>
           <div>
             <h3 className="font-bold text-sm text-white">ZiP Coach</h3>
-            <p className="text-[10px] text-slate-500 font-medium">AI Financial Strategy • v5.0</p>
+            <p className="text-[10px] text-slate-500 font-medium">AI Financial Strategy • v5.2</p>
           </div>
         </div>
         <button 

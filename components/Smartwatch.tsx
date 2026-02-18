@@ -203,7 +203,7 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
           </div>
 
           {watchAlert ? (
-            <div className="animate-in zoom-in duration-300 flex flex-col items-center justify-center gap-3 w-full h-full bg-slate-950/40 absolute inset-0 z-[30] rounded-full">
+            <div className="animate-in zoom-in duration-300 flex flex-col items-center justify-center gap-3 w-full h-full bg-slate-950/40 absolute inset-0 z-[30] rounded-full backdrop-blur-sm">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center ${watchAlert.type === 'error' ? 'bg-red-500/20 text-red-500' : 'bg-green-500/20 text-green-500'}`}>
                 <i className={`fas ${watchAlert.type === 'error' ? 'fa-exclamation-triangle' : 'fa-check-circle'} text-xl`}></i>
               </div>
@@ -366,12 +366,14 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
                 </p>
               </div>
               
-              <button 
-                onClick={onToggleActive}
-                className={`w-6 h-6 rounded-full flex items-center justify-center transition-all active:scale-90 ${userWallet.isActive ? (userWallet.balance < 0 ? 'blinking-red bg-red-500' : 'blinking-green bg-green-500') : 'blinking-red bg-red-500'}`}
-              >
-                <div className="w-2 h-2 rounded-full bg-white"></div>
-              </button>
+              <div className="flex gap-3">
+                <button 
+                  onClick={onToggleActive}
+                  className={`w-6 h-6 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg ${userWallet.isActive ? (userWallet.balance < 0 ? 'blinking-red bg-red-500' : 'blinking-green bg-green-500') : 'blinking-red bg-red-500'}`}
+                >
+                  <div className="w-2 h-2 rounded-full bg-white"></div>
+                </button>
+              </div>
 
               <div className="absolute bottom-6 flex gap-1">
                 {[...Array(5)].map((_, i) => (

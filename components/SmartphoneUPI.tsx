@@ -103,6 +103,17 @@ const SmartphoneUPI: React.FC<Props> = ({
     return () => clearInterval(timer);
   }, []);
 
+  // Proactive Insight Detection for UI Notification
+  const hasInsights = useMemo(() => {
+    const { balance, dailySpent, dailyLimit, transactions } = userWallet;
+    // Check for low balance, high debt, or near spending limit
+    if (balance < 100) return true;
+    if (dailySpent > dailyLimit * 0.8) return true;
+    // Check for recent emergency transactions
+    if (transactions.slice(0, 5).some(t => t.peer.includes('Emergency'))) return true;
+    return false;
+  }, [userWallet]);
+
   // Map Drag Logic
   useEffect(() => {
     const handleMove = (e: MouseEvent | TouchEvent) => {
@@ -939,9 +950,12 @@ const SmartphoneUPI: React.FC<Props> = ({
         <div className="flex gap-2">
           <button 
             onClick={() => { haptics.mediumClick(); setShowAI(true); }}
-            className="w-10 h-10 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all shadow-lg shadow-indigo-500/10"
+            className="w-10 h-10 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all shadow-lg shadow-indigo-500/10 relative"
           >
             <i className="fas fa-robot"></i>
+            {hasInsights && (
+               <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 border-2 border-slate-900 rounded-full animate-pulse"></span>
+            )}
           </button>
           <button 
             onClick={() => { haptics.mediumClick(); setShowGreenWallet(true); }}

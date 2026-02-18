@@ -4,6 +4,7 @@ import { AppMode, GlobalState, Transaction, NotificationType } from './types';
 import SmartphoneUPI from './components/SmartphoneUPI';
 import Smartwatch from './components/Smartwatch';
 import MerchantApp from './components/MerchantApp';
+import BiometricAuth from './components/BiometricAuth';
 import { sounds } from './utils/audio';
 import { haptics } from './utils/haptics';
 
@@ -42,6 +43,7 @@ const initialState: GlobalState = {
 };
 
 const App: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeMode, setActiveMode] = useState<AppMode>(AppMode.UPI);
   const [watchAlert, setWatchAlert] = useState<{ message: string; type: NotificationType } | null>(null);
   const [phoneAlert, setPhoneAlert] = useState<{ message: string; type: NotificationType } | null>(null);
@@ -479,6 +481,10 @@ const App: React.FC = () => {
     }));
     triggerPhoneAlert(`Settlement of ₹${amount} completed to your bank account.`, 'success');
   };
+
+  if (!isAuthenticated) {
+    return <BiometricAuth onAuthenticated={() => setIsAuthenticated(true)} />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-slate-950 text-slate-100 overflow-x-hidden">
