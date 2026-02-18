@@ -197,7 +197,7 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
                 <i className="fas fa-battery-three-quarters text-[8px]"></i>
               </div>
             </div>
-            <div className="text-[8px] font-black text-slate-300 tracking-tight uppercase">
+            <div className="text-[10px] font-black text-slate-300 tracking-tight uppercase">
               {time}
             </div>
           </div>
