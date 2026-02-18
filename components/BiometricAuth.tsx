@@ -27,7 +27,7 @@ const BiometricAuth: React.FC<Props> = ({ onAuthenticated }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
+    <div className="absolute inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500 sm:rounded-[3rem]">
       <div className="mb-8 relative">
         <div className="w-24 h-24 rounded-full bg-indigo-500/10 flex items-center justify-center relative overflow-hidden">
           {scanning && (
@@ -42,9 +42,9 @@ const BiometricAuth: React.FC<Props> = ({ onAuthenticated }) => {
         </div>
       </div>
 
-      <h1 className="text-2xl font-black text-white tracking-tight mb-2">ZiPPaY</h1>
-      <p className="text-sm text-slate-500 font-medium mb-12">
-        {scanning ? 'Verifying Identity...' : 'Scan fingerprint to login'}
+      <h1 className="text-2xl font-black text-white tracking-tight mb-2">ZiP<span className="text-indigo-500">PaY</span></h1>
+      <p className="text-sm text-slate-500 font-medium mb-12 px-8">
+        {scanning ? 'Verifying Identity...' : 'Biometric identification required to access UPI Wallet'}
       </p>
 
       <button
@@ -52,11 +52,11 @@ const BiometricAuth: React.FC<Props> = ({ onAuthenticated }) => {
         className="w-full max-w-xs bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 rounded-2xl transition-all active:scale-95 border border-slate-700/50 shadow-lg flex items-center justify-center gap-3"
       >
         <i className="fas fa-unlock-alt"></i>
-        <span>Authenticate</span>
+        <span>Unlock UPI</span>
       </button>
 
-      <div className="mt-8 text-xs text-slate-600 font-mono">
-        SECURE ENCLAVE • BANK GRADE
+      <div className="mt-8 text-[10px] text-slate-700 font-black uppercase tracking-[0.2em]">
+        Secure Enclave Protected
       </div>
 
       <style>{`

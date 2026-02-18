@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { GlobalState, Transaction, NotificationType } from '../types';
 import NotificationOverlay from './NotificationOverlay';
 import AIAssistant from './AIAssistant';
+import BiometricAuth from './BiometricAuth';
 import { haptics } from '../utils/haptics';
 import { GoogleGenAI } from "@google/genai";
 
@@ -54,6 +55,9 @@ async function decodeAudioData(
   return buffer;
 }
 
+// Persistent session state to prevent re-locking when switching tabs
+let upiSessionAuthenticated = false;
+
 const SmartphoneUPI: React.FC<Props> = ({ 
   userWallet, 
   connectivity, 
@@ -68,6 +72,7 @@ const SmartphoneUPI: React.FC<Props> = ({
   onCloseAlert,
   fullState
 }) => {
+  const [internalAuthenticated, setInternalAuthenticated] = useState(upiSessionAuthenticated);
   const [amount, setAmount] = useState<string>('');
   const [showFullHistory, setShowFullHistory] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
@@ -78,6 +83,11 @@ const SmartphoneUPI: React.FC<Props> = ({
   const [chartType, setChartType] = useState<ChartType>('Area');
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [sortType, setSortType] = useState<SortType>('date-desc');
+
+  const handleAuthenticated = () => {
+    upiSessionAuthenticated = true;
+    setInternalAuthenticated(true);
+  };
 
   // Daily Limit UI State
   const [isEditingLimit, setIsEditingLimit] = useState(false);
@@ -537,6 +547,14 @@ const SmartphoneUPI: React.FC<Props> = ({
   };
 
   const frameClasses = "w-full sm:max-w-sm bg-slate-900 sm:border border-slate-800 sm:rounded-[3rem] p-6 sm:p-8 mb-4 sm:mb-20 shadow-2xl relative overflow-hidden flex flex-col h-[680px]";
+
+  if (!internalAuthenticated) {
+    return (
+      <div className={`${frameClasses} mx-auto`}>
+        <BiometricAuth onAuthenticated={handleAuthenticated} />
+      </div>
+    );
+  }
 
   if (showFullHistory) {
     return (

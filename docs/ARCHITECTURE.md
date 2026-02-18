@@ -38,6 +38,10 @@ ZiPPaY operates as a distributed state system across three virtual "nodes":
 - **Audio**: `SoundManager` uses `AudioContext` to synthesize success/error tones.
 - **Haptics**: `HapticManager` provides discrete vibration patterns for tactile feedback.
 
+### F. Immersive 3D Rendering
+- **Engine**: Spline Runtime (`@splinetool/react-spline`).
+- **Integration**: Embeds a high-fidelity 3D model of the smartwatch within the React DOM.
+- **Performance**: Uses WebGL for real-time rendering without blocking the React render cycle.
 
 ## 3. Workflow Logics
 

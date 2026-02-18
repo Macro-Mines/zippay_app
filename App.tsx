@@ -4,7 +4,6 @@ import { AppMode, GlobalState, Transaction, NotificationType } from './types';
 import SmartphoneUPI from './components/SmartphoneUPI';
 import Smartwatch from './components/Smartwatch';
 import MerchantApp from './components/MerchantApp';
-import BiometricAuth from './components/BiometricAuth';
 import { sounds } from './utils/audio';
 import { haptics } from './utils/haptics';
 
@@ -43,7 +42,6 @@ const initialState: GlobalState = {
 };
 
 const App: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeMode, setActiveMode] = useState<AppMode>(AppMode.UPI);
   const [watchAlert, setWatchAlert] = useState<{ message: string; type: NotificationType } | null>(null);
   const [phoneAlert, setPhoneAlert] = useState<{ message: string; type: NotificationType } | null>(null);
@@ -482,10 +480,6 @@ const App: React.FC = () => {
     triggerPhoneAlert(`Settlement of ₹${amount} completed to your bank account.`, 'success');
   };
 
-  if (!isAuthenticated) {
-    return <BiometricAuth onAuthenticated={() => setIsAuthenticated(true)} />;
-  }
-
   return (
     <div className="min-h-screen flex flex-col items-center bg-slate-950 text-slate-100 overflow-x-hidden">
       <header className="w-full max-w-6xl flex flex-col sm:flex-row justify-between items-center px-6 py-4 border-b border-slate-800 gap-4 sm:gap-0 sticky top-0 bg-slate-950/80 backdrop-blur-md z-[60]">
@@ -515,7 +509,7 @@ const App: React.FC = () => {
       </header>
 
       <main className="w-full flex-1 flex flex-col items-center justify-center py-4 px-0 sm:px-4 animate-in fade-in duration-500">
-        <div className="w-full max-w-md mx-auto flex flex-col items-center">
+        <div className="w-full max-w-md mx-auto flex flex-col items-center relative">
           {activeMode === AppMode.UPI && (
             <SmartphoneUPI 
               userWallet={state.userWallet} 

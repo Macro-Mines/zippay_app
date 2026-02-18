@@ -9,7 +9,7 @@ This document marks a stable checkpoint for the ZiPPaY ecosystem. All core funct
 ## Component Health
 | Component | Status | Recent Updates |
 | :--- | :--- | :--- |
-| **Smartphone UPI** | 🟢 Ready | Fixed horizontal scrolling; Added Geo-fencing. |
+| **Smartphone UPI** | 🟢 Ready | Fixed horizontal scrolling; Integrated Spline 3D; Added Geo-fencing. |
 | **Smartwatch** | 🟢 Ready | Circular UI optimized; Offline sync buffer active. |
 | **Merchant App** | 🟢 Ready | Proximity handshake logic functioning. |
 | **AI Assistant** | 🟢 Ready | Context injection and proactive coaching enabled. |
