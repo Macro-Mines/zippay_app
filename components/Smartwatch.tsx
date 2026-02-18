@@ -187,17 +187,17 @@ const Smartwatch: React.FC<Props> = ({ userWallet, pendingRequest, isMobileConne
         >
           
           {/* Centered Status Bar */}
-          <div className="absolute top-4 left-0 right-0 flex flex-col items-center z-20">
+          <div className="absolute top-1 left-0 right-0 flex flex-col items-center z-20">
             <div className="flex items-center gap-1.5">
               <div className={`transition-colors duration-500 ${bluetoothColorClass}`}>
-                <i className="fab fa-bluetooth-b text-[7px]"></i>
+                <i className="fab fa-bluetooth-b text-[10px]"></i>
               </div>
               <div className="flex items-center gap-1 text-slate-400">
                 <span className="text-[7px] font-black tracking-tighter">85%</span>
                 <i className="fas fa-battery-three-quarters text-[8px]"></i>
               </div>
             </div>
-            <div className="text-[8px] font-black text-slate-300 tracking-tight uppercase mt-0.5">
+            <div className="text-[8px] font-black text-slate-300 tracking-tight uppercase">
               {time}
             </div>
           </div>
