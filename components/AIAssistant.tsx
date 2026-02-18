@@ -110,7 +110,12 @@ const AIAssistant: React.FC<Props> = ({ state, onClose }) => {
     setIsLoading(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const apiKey = process.env.API_KEY;
+      if (!apiKey) {
+        throw new Error("API Key is missing in environment variables.");
+      }
+
+      const ai = new GoogleGenAI({ apiKey });
       
       const statsContext = `
         Current ZiP Balance: ₹${state.userWallet.balance}
@@ -143,11 +148,20 @@ const AIAssistant: React.FC<Props> = ({ state, onClose }) => {
 
       const aiText = response.text || "I'm having trouble processing that right now. Let's try again?";
       setMessages(prev => [...prev, { role: 'assistant', content: aiText, timestamp: new Date() }]);
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      console.error("Gemini API Error:", error);
+      let errorMessage = "Network hiccup! Please check your connection.";
+      
+      if (error.message) {
+        if (error.message.includes("API Key")) errorMessage = "Config Error: API Key is invalid or missing.";
+        else if (error.message.includes("403")) errorMessage = "Access Denied: Check API Key permissions/quota.";
+        else if (error.message.includes("404")) errorMessage = "Model Error: The 'gemini-3-pro-preview' model is not found.";
+        else errorMessage = `Error: ${error.message}`;
+      }
+
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        content: "Network hiccup! Please ensure your environment is configured correctly.",
+        content: `⚠️ ${errorMessage}`,
         timestamp: new Date()
       }]);
     } finally {
