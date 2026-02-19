@@ -205,7 +205,7 @@ const SmartphoneUPI: React.FC<Props> = ({
     const hitThreshold = 15;
 
     if (dist1 < hitThreshold) {
-       onUpdateGeoStatus('risk', 'Sanctioned Zone (North)');
+       onUpdateGeoStatus('risk', 'Restricted Zone (North)');
     } else if (dist2 < hitThreshold) {
        onUpdateGeoStatus('risk', 'High Risk Sector');
     } else {
