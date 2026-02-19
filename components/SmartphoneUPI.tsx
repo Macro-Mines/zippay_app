@@ -1219,7 +1219,7 @@ const SmartphoneUPI: React.FC<Props> = ({
                  <div className="w-20 h-20 rounded-full border border-red-500/30 bg-red-500/10 flex items-center justify-center animate-pulse">
                     <div className="w-10 h-10 rounded-full bg-red-500/20"></div>
                  </div>
-                 <span className="text-[7px] font-black text-red-500/50 uppercase mt-1">Sanctioned Zone</span>
+                 <span className="text-[7px] font-black text-red-500/50 uppercase mt-1">Prohibited Zone</span>
               </div>
               
               {/* Zone 2: Center approx 80%, 70% */}
