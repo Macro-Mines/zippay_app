@@ -159,7 +159,7 @@ const SmartphoneUPI: React.FC<Props> = ({
         if (dist1 < hitThreshold) {
              if (userWallet.geoStatus !== 'risk') {
                  haptics.errorPulse();
-                 onUpdateGeoStatus('risk', 'Sanctioned Zone (North)');
+                 onUpdateGeoStatus('risk', 'Restricted Zone (North)');
              }
         } else if (dist2 < hitThreshold) {
              if (userWallet.geoStatus !== 'risk') {
