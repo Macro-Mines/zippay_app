@@ -1,27 +1,28 @@
 # ZiPPaY - Quick Reference for Judges & Investors
-## 5-Minute Elevator Pitch + Deep Dive
+## Micro-Payment System for RBI e-Rupee (CBDC) - Offline First
 
 ---
 
 ## 🎯 What is ZiPPaY?
 
 **The Problem:**
-- 270 million Indians lack smartphones
-- Rural areas: 40% no internet connectivity
-- UPI impossible without phones + internet
-- Micromerchants (tea stalls, local shops) struggle with payment infrastructure
+- 270 million unbanked Indians without digital payment access
+- Rural areas: 40% zero internet connectivity
+- Micro-merchants cannot accept digital payments (₹50-500 transactions)
+- RBI e-Rupee needs offline micro-payment infrastructure
 
 **The Solution:**
-- **Offline-first smartwatch e-Rupee wallet**
-- Payment works without internet
-- Hardware-based security (no phones to steal)
-- Works with RBI's CBDC framework (e-Rupee)
+- **Micro-Payment System for RBI e-Rupee (CBDC)**
+- Aligned with RBI Dec 2022 Offline Payment Framework
+- Works 100% offline (zero internet required)
+- Hardware-based security (EAL4+ certified)
+- Target: ₹50-₹2,000 micro-transactions
 
 **Why Now?**
-- RBI published offline payment framework (Dec 2022)
-- e-Rupee CBDC live (Dec 2023, expanding)
-- Smartwatch prices dropping (₹8K→₹2.5K by 2028)
-- NPCI infrastructure ready for new payment methods
+- RBI published offline framework (Dec 2022) - we're aligned with it
+- e-Rupee CBDC live (Dec 2023) - we integrate it
+- Smartwatch market growing + prices dropping (₹8K→₹2.5K)
+- NPCI infrastructure ready for micro-payment integrations
 
 ---
 

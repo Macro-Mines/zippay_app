@@ -1,5 +1,5 @@
 # ZiPPaY Complete Workflow Guide
-## e-Rupee Offline Payment System Architecture
+## Micro-Payment System for RBI e-Rupee (CBDC) - Offline Framework
 
 ---
 
