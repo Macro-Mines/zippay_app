@@ -1,0 +1,66 @@
+sequenceDiagram
+    participant Terminal as 🏪 Terminal
+    participant MerchantBank as 🏦 Merchant Bank
+    participant NPCI as 📡 NPCI
+    participant RBI as 🏛️ RBI<br/>(e-Rupee Core)
+    participant YourBank as 🏦 Your Bank
+    
+    Note over Terminal,YourBank: PHASE 3: SETTLEMENT (Automatic overnight, T+0)
+    
+    Note over Terminal,YourBank: 02:00 AM - Terminal auto-wakes
+    Terminal->>Terminal: Collects all day's transactions (150 payments)
+    Terminal->>Terminal: Total value: ₹15,280
+    Terminal->>Terminal: Creates batch with Merchant digital signature
+    
+    Terminal->>MerchantBank: HTTPS POST /settlement/batch (TLS 1.3)
+    Note over Terminal,MerchantBank: Payload: {BatchID, Transactions[], MerchantSig}
+    
+    MerchantBank->>MerchantBank: Receives batch (02:15 AM)
+    MerchantBank->>MerchantBank: Validates Merchant signature ✓
+    MerchantBank->>MerchantBank: Verifies transaction integrity
+    Note over MerchantBank: ✓ 150 transactions decoded<br/>✓ All signatures present<br/>✓ Total = ₹15,280
+    
+    MerchantBank->>MerchantBank: Signs batch with Bank Private Key (RSA-2048)
+    MerchantBank->>NPCI: Submit to NPCI (Dedicated encrypted channel)
+    
+    NPCI->>NPCI: Receives batch (02:18 AM)
+    NPCI->>NPCI: Validates Bank signature ✓
+    NPCI->>NPCI: Deduplication check (compare with last 30 days)
+    Note over NPCI: ✓ No duplicate TransactionIDs<br/>✓ No replay attacks detected
+    
+    NPCI->>NPCI: Verify each of 150 transactions
+    Note over NPCI: For each TX: Get Public Key from RBI,<br/>Verify ECDSA Signature, Validate Timestamp
+    
+    NPCI->>RBI: Submit settlement request
+    Note over NPCI,RBI: {BatchID, Transactions[], allSignaturesVerified}
+    
+    RBI->>RBI: COMPREHENSIVE VERIFICATION (02:20 AM)
+    
+    RBI->>RBI: For each transaction:
+    Note over RBI: 1. Verify Watch ECDSA signature ✓<br/>2. Check watch had sufficient balance ✓<br/>3. Check timestamp ordering ✓<br/>4. Prevent double-spending ✓
+    
+    RBI->>RBI: All 150 transactions verified ✓
+    RBI->>RBI: Create blockchain entry (append-only)
+    Note over RBI: Block contains: TX_001...TX_150,<br/>Merkle Root, RBI Digital Signature,<br/>Timestamp: 02:21 AM
+    
+    RBI->>RBI: START ATOMIC TRANSACTION
+    Note over RBI: BEGIN DB TRANSACTION:<br/>├─ Debit 150 users (total ₹15,280)<br/>├─ Credit merchant ₹15,280<br/>├─ Update e-Rupee ledger<br/>└─ COMMIT (all-or-nothing)
+    
+    RBI->>RBI: UPDATE e-RUPEE LEDGER (IMMUTABLE)
+    Note over RBI: Record permanently (can never be changed):<br/>TX_001: Tea, ₹50 ✓ SETTLED<br/>TX_002: Bus, ₹30 ✓ SETTLED<br/>TX_003: Milk, ₹40 ✓ SETTLED
+    
+    RBI-->>NPCI: ✓ Settlement CONFIRMED (02:22 AM)
+    
+    NPCI->>YourBank: Debit instructions
+    Note over NPCI,YourBank: For each user: Debit amount
+    
+    YourBank->>YourBank: Apply debits (T+0 intra-day)
+    Note over YourBank: User1: ₹10,000 → ₹9,950<br/>User2: ₹5,000 → ₹4,925
+    
+    NPCI->>MerchantBank: Credit instruction
+    Note over NPCI,MerchantBank: Amount: ₹15,280 (from RBI)
+    
+    MerchantBank->>MerchantBank: Credit merchant account (02:23 AM)
+    Note over MerchantBank: Merchant: ₹100,000 → ₹115,280<br/>✓ Funds available for withdrawal
+    
+    Note over Terminal,YourBank: ✓ SETTLEMENT COMPLETE (02:25 AM)<br/>Total Time: 25 minutes<br/>RBI Ledger: IMMUTABLE forever<br/>All parties: Settled & Verified

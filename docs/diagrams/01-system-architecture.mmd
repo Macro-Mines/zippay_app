@@ -1,0 +1,170 @@
+graph LR
+    subgraph User["👤 User Ecosystem"]
+        Phone["📱 Smartphone App<br/>(Main Wallet)"]
+        Watch["⌚ Smartwatch<br/>(Payment Device)"]
+    end
+    
+    subgraph Merchant["🏪 Merchant Ecosystem"]
+        Terminal["🏪 NFC Terminal<br/>(Payment Request)"]
+        MerchantBank["🏦 Merchant's Bank<br/>(Settlement)"]
+    end
+    
+    subgraph Infrastructure["🏢 Central Infrastructure"]
+        NPCI["📡 NPCI<br/>(Payment Processor)"]
+        RBI["🏛️ RBI e-Rupee Core<br/>(CBDC Ledger)"]
+        UserBank["🏦 User's Bank<br/>(Funds Source)"]
+    endgraph LR
+    subgraph User["👤 User Ecosystem"]
+        Phone["📱 Smartphone App<br/>(Main Wallet)"]
+        Watch["⌚ Smartwatch<br/>(Payment Device)"]
+    end
+    
+    subgraph Merchant["🏪 Merchant Ecosystem"]
+        Terminal["🏪 NFC Terminal<br/>(Payment Request)"]
+        MerchantBank["🏦 Merchant's Bank<br/>(Settlement)"]
+    end
+    
+    subgraph Infrastructure["🏢 Central Infrastructure"]
+        NPCI["📡 NPCI<br/>(Payment Processor)"]
+        RBI["🏛️ RBI e-Rupee Core<br/>(CBDC Ledger)"]
+        UserBank["🏦 User's Bank<br/>(Funds Source)"]
+    end
+    
+    Phone -->|BLE Encrypted| Watch
+    Watch -->|NFC 4-10cm| Terminal
+    Terminal -->|Settlement Batch| MerchantBank
+    MerchantBank -->|Encrypted TLS| NPCI
+    NPCI -->|Dedicated Channel| RBI
+    RBI -->|Settlement Instructions| UserBank
+    RBI -->|Public Keys| Terminal
+    Phone -->|WiFi : RBI API| RBI
+    UserBank -->|Funds Reserve| Phone
+    
+    style User fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style Merchant fill:#fff3e0,stroke:#d97706,stroke-width:2px
+    style Infrastructure fill:#f0f4f8,stroke:#475569,stroke-width:2px
+    style Phone fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    style Watch fill:#fff8e1,stroke:#f57f17,stroke-width:2px
+    style Terminal fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    style RBI fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+graph LR
+    subgraph User["👤 User Ecosystem"]
+        Phone["📱 Smartphone App<br/>(Main Wallet)"]
+        Watch["⌚ Smartwatch<br/>(Payment Device)"]
+    end
+    
+    subgraph Merchant["🏪 Merchant Ecosystem"]
+        Terminal["🏪 NFC Terminal<br/>(Payment Request)"]
+        MerchantBank["🏦 Merchant's Bank<br/>(Settlement)"]
+    end
+    
+    subgraph Infrastructure["🏢 Central Infrastructure"]
+        NPCI["📡 NPCI<br/>(Payment Processor)"]
+        RBI["🏛️ RBI e-Rupee Core<br/>(CBDC Ledger)"]
+        UserBank["🏦 User's Bank<br/>(Funds Source)"]
+    end
+    
+    Phone -->|BLE Encrypted| Watch
+    Watch -->|NFC 4-10cm| Terminal
+    Terminal -->|Settlement Batch| MerchantBank
+    MerchantBank -->|Encrypted TLS| NPCI
+    NPCI -->|Dedicated Channel| RBI
+    RBI -->|Settlement Instructions| UserBank
+    RBI -->|Public Keys| Terminal
+    Phone -->|WiFi : RBI API| RBI
+    UserBank -->|Funds Reserve| Phone
+    
+    style User fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style Merchant fill:#fff3e0,stroke:#d97706,stroke-width:2px
+    style Infrastructure fill:#f0f4f8,stroke:#475569,stroke-width:2px
+    style Phone fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    style Watch fill:#fff8e1,stroke:#f57f17,stroke-width:2px
+    style Terminal fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    style RBI fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+graph LR
+    subgraph User["👤 User Ecosystem"]
+        Phone["📱 Smartphone App<br/>(Main Wallet)"]
+        Watch["⌚ Smartwatch<br/>(Payment Device)"]
+    end
+    
+    subgraph Merchant["🏪 Merchant Ecosystem"]
+        Terminal["🏪 NFC Terminal<br/>(Payment Request)"]
+        MerchantBank["🏦 Merchant's Bank<br/>(Settlement)"]
+    end
+    
+    subgraph Infrastructure["🏢 Central Infrastructure"]
+        NPCI["📡 NPCI<br/>(Payment Processor)"]
+        RBI["🏛️ RBI e-Rupee Core<br/>(CBDC Ledger)"]
+        UserBank["🏦 User's Bank<br/>(Funds Source)"]
+    end
+    
+    Phone -->|BLE Encrypted| Watch
+    Watch -->|NFC 4-10cm| Terminal
+    Terminal -->|Settlement Batch| MerchantBank
+    MerchantBank -->|Encrypted TLS| NPCI
+    NPCI -->|Dedicated Channel| RBI
+    RBI -->|Settlement Instructions| UserBank
+    RBI -->|Public Keys| Terminal
+    Phone -->|WiFi : RBI API| RBI
+    UserBank -->|Funds Reserve| Phone
+    
+    style User fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style Merchant fill:#fff3e0,stroke:#d97706,stroke-width:2px
+    style Infrastructure fill:#f0f4f8,stroke:#475569,stroke-width:2px
+    style Phone fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    style Watch fill:#fff8e1,stroke:#f57f17,stroke-width:2px
+    style Terminal fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    style RBI fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+graph LR
+    subgraph User["👤 User Ecosystem"]
+        Phone["📱 Smartphone App<br/>(Main Wallet)"]
+        Watch["⌚ Smartwatch<br/>(Payment Device)"]
+    end
+    
+    subgraph Merchant["🏪 Merchant Ecosystem"]
+        Terminal["🏪 NFC Terminal<br/>(Payment Request)"]
+        MerchantBank["🏦 Merchant's Bank<br/>(Settlement)"]
+    end
+    
+    subgraph Infrastructure["🏢 Central Infrastructure"]
+        NPCI["📡 NPCI<br/>(Payment Processor)"]
+        RBI["🏛️ RBI e-Rupee Core<br/>(CBDC Ledger)"]
+        UserBank["🏦 User's Bank<br/>(Funds Source)"]
+    end
+    
+    Phone -->|BLE Encrypted| Watch
+    Watch -->|NFC 4-10cm| Terminal
+    Terminal -->|Settlement Batch| MerchantBank
+    MerchantBank -->|Encrypted TLS| NPCI
+    NPCI -->|Dedicated Channel| RBI
+    RBI -->|Settlement Instructions| UserBank
+    RBI -->|Public Keys| Terminal
+    Phone -->|WiFi : RBI API| RBI
+    UserBank -->|Funds Reserve| Phone
+    
+    style User fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style Merchant fill:#fff3e0,stroke:#d97706,stroke-width:2px
+    style Infrastructure fill:#f0f4f8,stroke:#475569,stroke-width:2px
+    style Phone fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    style Watch fill:#fff8e1,stroke:#f57f17,stroke-width:2px
+    style Terminal fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    style RBI fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+
+    
+    Phone -->|BLE Encrypted| Watch
+    Watch -->|NFC 4-10cm| Terminal
+    Terminal -->|Settlement Batch| MerchantBank
+    MerchantBank -->|Encrypted TLS| NPCI
+    NPCI -->|Dedicated Channel| RBI
+    RBI -->|Settlement Instructions| UserBank
+    RBI -->|Public Keys| Terminal
+    Phone -->|WiFi : RBI API| RBI
+    UserBank -->|Funds Reserve| Phone
+    
+    style User fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style Merchant fill:#fff3e0,stroke:#d97706,stroke-width:2px
+    style Infrastructure fill:#f0f4f8,stroke:#475569,stroke-width:2px
+    style Phone fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    style Watch fill:#fff8e1,stroke:#f57f17,stroke-width:2px
+    style Terminal fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    style RBI fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px

@@ -1,0 +1,114 @@
+sequenceDiagram
+    participant Merchant as 👨‍💼 Merchant
+    participant Terminal as 🏪 NFC Terminal
+    participant Watch as ⌚ Smartwatch
+    participant CryptoSE as 🔐 Secure Element
+    participant CryptoEngine as ⚙️ Crypto Engine
+    
+    Note over Merchant,Watch: SCENARIO: No WiFi/4G (OFFLINE)
+    Note over Merchant,Watch: User at tea stall, wants to pay ₹50
+    
+    Merchant->>Terminal: Enters Amount: ₹50
+    Terminal->>Terminal: Validates ₹50 ≤ ₹200 (limit) ✓
+    Terminal->>Terminal: Generates TransactionID (UUIDv4)
+    Terminal->>Terminal: Generates Nonce (random 128-bit)
+    Terminal->>Terminal: Captures Timestamp
+    
+    Terminal->>Terminal: Creates APDU Command Frame
+    Note over Terminal: {MerchantID, Amount: 50, TransactionID, Nonce, Timestamp}
+    
+    Terminal->>Terminal: Encrypt Frame (optional layer)
+    Terminal->>Terminal: Activate NFC Reader (13.56 MHz)
+    Terminal-->>Merchant: "Place device on reader"
+    
+    Merchant->>Watch: Brings watch close to terminal (4-8cm)
+    Watch->>Watch: NFC Module Powers On
+    
+    Watch->>Watch: Receive NFC Signal (Initiated Mode)
+    Watch->>Watch: Decode APDU Frame
+    Watch->>Watch: Extract: MerchantID, Amount, TransactionID, Nonce
+    
+    Watch->>Watch: Validate Data
+    Note over Watch: Amount ≤ ₹200? ✓<br/>Amount ≤ balance (₹500)? ✓
+    
+    Watch->>Watch: Display on Screen: "Payment Request"
+    Watch->>Watch: Display: "🏪 Tea Shop - ₹50?"
+    
+    Watch->>Watch: Vibration Alert (2x 100ms pulses)
+    Watch->>Watch: Play Audio Tone: 200Hz "ready" beep
+    
+    Merchant->>User: "Place finger on watch"
+    User->>Watch: Taps Watch Face (confirm gesture) or Biometric
+    
+    Watch->>CryptoSE: Request: Sign Payment
+    
+    CryptoSE->>CryptoSE: Retrieve Private Key (never leaves SE)
+    CryptoSE->>CryptoEngine: Create Payment Certificate
+    Note over CryptoEngine: {<br/>MerchantID, Amount: 50, TransactionID,<br/>Timestamp (local), User UUID, Nonce<br/>}
+    
+    CryptoEngine->>CryptoEngine: Hash Certificate (SHA-256)
+    CryptoEngine->>CryptoSE: Sign Hash with ECDSA(P-256)
+    CryptoSE->>CryptoSE: Generate Signature (64 bytes)
+    CryptoSE-->>CryptoEngine: Return Signature ✓
+    
+    CryptoEngine->>CryptoEngine: Create Encrypted Envelope
+    Note over CryptoEngine: {<br/>Certificate (plaintext),<br/>Signature (encrypted),<br/>Checksum (SHA-256)<br/>}
+    
+    CryptoEngine-->>Watch: Ready to Send
+    
+    Watch->>Watch: Initiate NFC Response Mode
+    Watch->>Terminal: Transmit Encrypted Envelope via NFC
+    Note over Watch,Terminal: ~100ms transmission<br/>Max payload: 4KB (NFC limit)
+    
+    Terminal->>Terminal: Receive NFC Packet
+    Terminal->>Terminal: Extract & Decrypt Envelope
+    
+    Terminal->>Terminal: Retrieve User's Public Key
+    Note over Terminal: (cached from last RBI update)
+    
+    Terminal->>Terminal: Verify ECDSA Signature
+    Note over Terminal: Decrypt Signature with Public Key<br/>If decoded hash mismatch → REJECT
+    
+    alt Signature Valid
+        Terminal->>Terminal: ✓ Signature Verified
+        Terminal->>Terminal: Validate Timestamp
+        Note over Terminal: If |Terminal_Time - Cert_Time| > 30 sec → REJECT
+        Terminal->>Terminal: ✓ Timestamp Valid
+        
+        Terminal->>Terminal: Verify Nonce
+        Note over Terminal: Does nonce match request? → YES ✓
+        
+        Terminal->>Terminal: Verify Amount
+        Note over Terminal: Certificate amount = Request amount? → YES (₹50) ✓
+        
+        Terminal->>Terminal: Display: "✓ PAYMENT AUTHORIZED"
+        Terminal->>Terminal: Play Success Beep (high-pitched)
+        Terminal->>Terminal: Print Receipt (or SMS to merchant)
+        Terminal->>Merchant: Show Confirmation Screen
+    else Signature Invalid
+        Terminal->>Terminal: ❌ SIGNATURE VERIFICATION FAILED
+        Terminal->>Terminal: Display: "✗ Payment Rejected"
+        Terminal->>Terminal: Play Error Beep
+        Terminal->>Merchant: Show Error Screen
+        Terminal->>Watch: No confirmation sent
+    end
+    
+    Terminal->>Terminal: Store Transaction Locally
+    Note over Terminal: {<br/>TransactionID, MerchantID, Amount: 50,<br/>Timestamp, Signature, Status: PENDING_SETTLEMENT<br/>}
+    
+    Watch->>Watch: NFC disconnects (3-second timeout)
+    Watch->>Watch: Update LocalLedger
+    Note over Watch: TX_PAY_001: {<br/>MerchantID, Amount: 50, Timestamp,<br/>Status: PENDING_SYNC<br/>}
+    
+    Watch->>Watch: Deduct from Balance
+    Note over Watch: Balance: ₹500 - ₹50 = ₹450
+    
+    Watch->>Watch: Display: "✓ ₹50 Paid"
+    Watch->>Watch: Display: "Balance: ₹450"
+    Watch->>Watch: Play Success Tone (ascending 3-note beep)
+    Watch->>Watch: Haptic: 100ms @ 80Hz (strong pulse)
+    
+    Watch-->>User: Payment Complete Confirmation
+    Merchant-->>User: "Payment received, thank you!"
+    
+    Note over Watch,Terminal: NO INTERNET USED<br/>NO BANK CONNECTION<br/>PAYMENT COMPLETE

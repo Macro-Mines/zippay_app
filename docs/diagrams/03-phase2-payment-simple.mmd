@@ -1,0 +1,74 @@
+sequenceDiagram
+    participant Merchant as 👨‍💼 Merchant
+    participant Terminal as 🏪 NFC Terminal
+    participant Watch as ⌚ Your Watch
+    participant You as 👤 You
+    
+    Note over Merchant,You: PHASE 2: OFFLINE PAYMENT (5 seconds, NO INTERNET)
+    
+    Merchant->>Terminal: Enters amount: ₹50
+    Terminal->>Terminal: Generates TransactionID (UUID)
+    Terminal->>Terminal: Creates payment request with Nonce (random value)
+    
+    Terminal->>Terminal: Activates NFC reader (13.56 MHz)
+    Note over Terminal: NFC = Near Field Communication (4-10cm range)
+    
+    Merchant->>You: "Tap your watch on terminal"
+    You->>Watch: Brings watch near terminal
+    
+    Watch->>Watch: Detects NFC field ✓
+    Watch->>Terminal: NFC handshake established
+    Terminal->>Watch: Sends: {MerchantID, Amount:50, Nonce, Timestamp}
+    
+    Watch->>Watch: Receives NFC data
+    Watch->>Watch: Validates: Amount ≤ ₹200? ✓ Balance ≥ ₹50? ✓
+    Watch->>Watch: Display: "Payment Request - Tea Shop ₹50?"
+    Watch->>Watch: Vibration alert + audio tone
+    
+    You->>Watch: Taps watch to confirm (gesture recognition)
+    Watch->>Watch: Triggers Secure Element
+    
+    Note over Watch: === CRYPTOGRAPHIC SIGNING (Inside Secure Element) ===
+    Watch->>Watch: Create Payment Certificate
+    Note over Watch: {MerchantID, Amount:50, TransactionID,<br/>Timestamp(local), User_UUID, Nonce}
+    
+    Watch->>Watch: Hash certificate (SHA-256)
+    Watch->>Watch: Sign hash with Private Key (ECDSA-P256)
+    Note over Watch: Signature = Math proof this is real and from this watch
+    
+    Watch->>Watch: Encrypt signature + certificate (AES-256)
+    Watch->>Terminal: NFC transmission: encrypted envelope
+    Note over Watch,Terminal: Payload: {Certificate, Signature, Checksum}
+    
+    Terminal->>Terminal: Receive NFC packet
+    Terminal->>Terminal: Decrypt envelope
+    Terminal->>Terminal: Retrieve User Public Key (cached from RBI)
+    Terminal->>Terminal: Verify ECDSA Signature
+    Note over Terminal: If math doesn't match → REJECTED
+    
+    alt Signature Valid
+        Terminal->>Terminal: ✓ Signature verified
+        Terminal->>Terminal: Validate Timestamp (±30 sec window)
+        Terminal->>Terminal: Verify Nonce matches
+        Terminal->>Terminal: Verify Amount = ₹50
+        Terminal->>Terminal: Display: "✓ PAYMENT AUTHORIZED"
+        Terminal->>Merchant: Green screen + receipt
+    else Signature Invalid
+        Terminal->>Terminal: ❌ SIGNATURE FAILED
+        Terminal->>Terminal: Display: "❌ Payment Rejected"
+        Terminal->>Watch: No confirmation sent
+    end
+    
+    Terminal->>Terminal: Store transaction locally
+    Note over Terminal: {TransactionID, MerchantID:TEA_001,<br/>Amount:50, Timestamp, Signature}
+    
+    Watch->>Watch: Update LocalLedger
+    Note over Watch: {TransactionID, MerchantID, Amount:50,<br/>Status: PENDING_SYNC}
+    
+    Watch->>Watch: Deduct balance: ₹500 - ₹50 = ₹450
+    Watch->>Watch: Display: "✓ ₹50 Paid - Balance: ₹450"
+    Watch->>Watch: Success tone + haptic feedback
+    
+    Merchant->>User: "Thank you! Your tea is ready"
+    
+    Note over Merchant,You: ✓ COMPLETE (OFFLINE)<br/>Payment verified by cryptographic signature<br/>NO bank connection needed<br/>NO fraud possible (math proves authenticity)

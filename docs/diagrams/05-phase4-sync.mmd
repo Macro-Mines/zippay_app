@@ -1,0 +1,111 @@
+sequenceDiagram
+    participant Watch as ⌚ Smartwatch
+    participant Phone as 📱 Phone App
+    participant RBI as 🏛️ RBI Server
+    participant Ledger as 📊 Phone Ledger
+    
+    Note over Watch,Ledger: SCENARIO: User arrives home with WiFi
+    Note over Watch,Ledger: Watch has 3 pending offline transactions
+    
+    Watch->>Watch: LocalLedger Status
+    Note over Watch: TX_001: Tea ₹50 - PENDING_SYNC<br/>TX_002: Bus ₹30 - PENDING_SYNC<br/>TX_003: Milk ₹40 - PENDING_SYNC<br/>Current Balance: ₹380
+    
+    Phone->>Phone: Background Process: Check for Nearby Watch
+    Phone->>Phone: BLE Scanner Active
+    
+    Watch->>Watch: BLE Advertising: "ZiPPay-Watch"
+    Phone->>Watch: Discover Watch Signal ✓
+    
+    Phone->>Watch: Initiate BLE Connection
+    Watch->>Watch: Accept Connection Request
+    
+    Phone->>Watch: Handshake: Exchange Certificates
+    Watch->>Watch: Verify Phone Certificate ✓
+    Phone->>Phone: Verify Watch Certificate ✓
+    
+    Phone->>Watch: Authenticate with HMAC-SHA256
+    Watch->>Watch: Mutual Authentication ✓
+    
+    Phone->>Watch: Establish Session Key (ECDH)
+    Watch->>Watch: Generate Shared Secret (256-bit)
+    Phone->>Phone: Generate Shared Secret (256-bit - same)
+    Note over Phone,Watch: Both compute identical key via ECDH
+    
+    Phone->>Watch: Enable Encryption (AES-256-CCM)
+    Watch->>Watch: Start Encrypted Channel ✓
+    
+    Phone->>Watch: Send: Sync Request
+    Note over Phone,Watch: {<br/>sync_id: UUID,<br/>timestamp: 14:30:00,<br/>version: 1<br/>}
+    
+    Watch->>Watch: Prepare Sync Package
+    Watch->>Watch: Encrypt LocalLedger (AES-256-GCM)
+    Note over Watch: {<br/>Transactions[3]:<br/>├─ TX_001: {merchant, amount: 50, sig},<br/>├─ TX_002: {merchant, amount: 30, sig},<br/>└─ TX_003: {merchant, amount: 40, sig},<br/>Current_Balance: 380,<br/>LocalLedger_Hash: SHA256(...),<br/>Watch_Timestamp: 14:30:15<br/>}
+    
+    Watch->>Watch: Create LocalLedger Checksum
+    Note over Watch: HMAC-SHA256(LocalLedger || session_key)
+    
+    Watch-->>Phone: Send Encrypted Ledger + Checksum
+    Note over Watch,Phone: ~2KB encrypted via BLE
+    
+    Phone->>Phone: Receive via BLE
+    Phone->>Phone: Verify Session Integrity
+    Phone->>Phone: Validate Checksum ✓
+    
+    Phone->>Phone: Decrypt LocalLedger (AES-256-GCM)
+    Phone->>Phone: Extract 3 Transactions
+    
+    Phone->>Phone: Validate Each Transaction
+    Note over Phone: For each of 3 transactions:<br/>├─ Check signature format ✓<br/>├─ Check timestamp ✓<br/>├─ Check amount ≤ ₹200 ✓<br/>└─ Check merchant ID valid ✓
+    
+    Phone->>Ledger: Merge into Phone Ledger
+    Note over Phone: Phone LocalLedger now includes:<br/>├─ TX_001: Status SYNCED ✓<br/>├─ TX_002: Status SYNCED ✓<br/>└─ TX_003: Status SYNCED ✓
+    
+    Phone->>Phone: Update Global State
+    Note over Phone: userWallet.balance: ₹380<br/>userWallet.pendingSync: [] (cleared)
+    
+    Phone->>Phone: Display Sync Confirmation
+    Note over Phone: "✓ 3 transactions synced<br/>Balance: ₹380"
+    
+    Watch->>Watch: Clear LocalLedger Pending Flag
+    Watch->>Watch: LocalLedger Status: SYNCED
+    
+    Phone->>Watch: Send: Sync Acknowledgement
+    Note over Phone,Watch: {<br/>status: CONFIRMED,<br/>tx_count: 3,<br/>timestamp: 14:30:45<br/>}
+    
+    Watch->>Watch: Receive Ack
+    Watch->>Watch: Update Status: SYNC_COMPLETE ✓
+    
+    alt WiFi Available on Phone
+        Phone->>Phone: Connect to WiFi
+        Phone->>RBI: POST /api/v1/post-sync-verify
+        Note over Phone,RBI: Payload: Encrypted transactions + merkle_root
+        
+        RBI->>RBI: Receive Post-Sync Verification
+        RBI->>RBI: Verify Transactions Against Settlement
+        Note over RBI: Query Settlement Ledger:<br/>├─ TX_001: Found, Status SETTLED ✓<br/>├─ TX_002: Found, Status SETTLED ✓<br/>└─ TX_003: Found, Status SETTLED ✓
+        
+        RBI->>RBI: Verify Balance Consistency
+        Note over RBI: Expected balance = 500 - (50+30+40) = 380 ✓<br/>Claimed balance = 380 ✓<br/>Match! ✓
+        
+        RBI-->>Phone: Verification Confirmed
+        Note over RBI,Phone: All 3 transactions verified<br/>Balance consistent<br/>User's account updated
+        
+        Phone->>Phone: Display: "✓ All Transactions Verified"
+        Phone->>Ledger: Mark All Transactions
+        Note over Ledger: TX_001: Status VERIFIED<br/>TX_002: Status VERIFIED<br/>TX_003: Status VERIFIED
+    else No WiFi Yet
+        Note over Phone: Sync will continue offline<br/>RBI verification will happen<br/>when WiFi becomes available
+    end
+    
+    Phone->>Phone: Run AI Analysis
+    Note over Phone: Check spending patterns:<br/>├─ 3 small transactions in 1 hour<br/>├─ No anomalies detected ✓<br/>└─ All within daily limit (₹2000)<br/>Generate: "Good spending habits!" insight
+    
+    Phone->>Phone: Update Dashboard
+    Note over Phone: Recent Transactions:<br/>├─ 14:30: Milk ₹40 (VERIFIED)<br/>├─ 14:20: Bus ₹30 (VERIFIED)<br/>└─ 14:10: Tea ₹50 (VERIFIED)<br/>Total Today: ₹120
+    
+    Watch->>Watch: Update Display
+    Note over Watch: Main Screen: "Balance: ₹380"<br/>Recent TX: "Tea ₹50"<br/>Status: "Ready to Pay"
+    
+    Note over Watch,Ledger: SYNC COMPLETE<br/>Watch LocalLedger: CLEARED<br/>Phone Ledger: UPDATED<br/>All Transactions: VERIFIED<br/>User & Merchant Bank: Reconciled
+    
+    Note over Watch,Ledger: User can now:<br/>├─ See full transaction history<br/>├─ View verified status<br/>├─ Receive AI insights<br/>└─ Continue making offline payments

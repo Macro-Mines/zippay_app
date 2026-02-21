@@ -1,0 +1,71 @@
+sequenceDiagram
+    participant Watch as ⌚ Watch
+    participant Phone as 📱 Phone App
+    participant RBI as 🏛️ RBI
+    
+    Note over Watch,RBI: PHASE 4: SYNC & VERIFICATION (When WiFi available)
+    
+    User->>Phone: User arrives home (WiFi available)
+    
+    Phone->>Watch: BLE scan activated (Bluetooth Low Energy)
+    Watch->>Phone: Advertising packet detected
+    
+    Phone->>Watch: Initiate BLE connection
+    Watch->>Phone: Accept & respond
+    
+    Phone->>Watch: Mutual certificate authentication
+    Note over Phone,Watch: Verify device identities (X.509 certs)
+    
+    Phone->>Watch: Establish encrypted session
+    Note over Phone,Watch: ECDH key agreement: Create shared secret<br/>Enable AES-256-CCM encryption
+    
+    Phone->>Watch: Send sync request
+    Note over Phone,Watch: {sync_id: UUID, timestamp, version}
+    
+    Watch->>Watch: Prepare LocalLedger for sync
+    Note over Watch: TX_001: {Merchant, ₹50, Sig} - PENDING_SYNC<br/>TX_002: {Merchant, ₹30, Sig} - PENDING_SYNC<br/>TX_003: {Merchant, ₹40, Sig} - PENDING_SYNC
+    
+    Watch->>Watch: Create Merkle Hash (SHA-256)
+    Note over Watch: Hash of all transactions combined<br/>Used to verify data integrity
+    
+    Watch->>Watch: Encrypt LocalLedger (AES-256-GCM)
+    Watch->>Watch: Compute HMAC checksum for authentication
+    
+    Watch-->>Phone: Send encrypted ledger via BLE
+    Note over Watch,Phone: Payload: {Transactions[], MerkleHash, HMAC}
+    
+    Phone->>Phone: Receive & validate BLE packet
+    Phone->>Phone: Verify HMAC checksum ✓
+    
+    Phone->>Phone: Decrypt LocalLedger (AES-256)
+    Phone->>Phone: Validate each transaction
+    Note over Phone: ✓ Signature format valid<br/>✓ Timestamp valid<br/>✓ Amount ≤ ₹200<br/>✓ Merchant ID valid
+    
+    Phone->>Phone: Merge into Phone Ledger (database)
+    Note over Phone: Update GlobalState:<br/>TX_001: Status SYNCED ✓<br/>TX_002: Status SYNCED ✓<br/>TX_003: Status SYNCED ✓<br/>Balance: ₹380
+    
+    Phone->>RBI: POST /api/v1/verify-sync (HTTPS TLS 1.3)
+    Note over Phone,RBI: {transactions[], user_id, merkle_root}
+    
+    RBI->>RBI: Verify transactions against settlement ledger
+    Note over RBI: Query: TX_001 found in SETTLED? YES ✓<br/>Query: TX_002 found in SETTLED? YES ✓<br/>Query: TX_003 found in SETTLED? YES ✓
+    
+    RBI->>RBI: Verify balance consistency
+    Note over RBI: Expected balance: ₹500 - 50 - 30 - 40 = ₹380 ✓<br/>Claimed balance: ₹380 ✓<br/>Match confirmed!
+    
+    RBI-->>Phone: Verification CONFIRMED
+    Note over RBI,Phone: {status: OK, verified_count: 3}
+    
+    Phone->>Phone: Mark all transactions as VERIFIED
+    Note over Phone: TX_001: Status VERIFIED_BY_RBI ✓<br/>TX_002: Status VERIFIED_BY_RBI ✓<br/>TX_003: Status VERIFIED_BY_RBI ✓
+    
+    Phone->>Phone: Clear PendingSync queue
+    Watch->>Watch: Update status to SYNCED
+    
+    Phone->>Phone: Run AI analysis (anomaly detection)
+    Note over Phone: Check spending patterns:<br/>✓ 3 transactions in 1 hour<br/>✓ All small amounts<br/>✓ No fraud detected
+    
+    Phone->>User: Display: "✓ All 3 transactions verified"
+    Watch->>User: Display: "Balance: ₹380 VERIFIED"
+    
+    Note over Watch,RBI: ✓ SYNC COMPLETE<br/>Watch LocalLedger: CLEARED<br/>Phone Ledger: VERIFIED by RBI<br/>All transactions: IMMUTABLE in RBI core

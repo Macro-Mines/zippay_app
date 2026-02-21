@@ -1,0 +1,112 @@
+sequenceDiagram
+    participant Terminal as 🏪 Terminal
+    participant MBank as 🏦 Merchant Bank
+    participant NPCI as 📡 NPCI
+    participant RBI as 🏛️ RBI Core
+    participant UBank as 🏦 User Bank
+    
+    Note over Terminal,UBank: NEXT MORNING (02:00 AM)
+    Note over Terminal,UBank: Automatic Overnight Settlement
+    
+    Terminal->>Terminal: Check WiFi Connection
+    Terminal->>Terminal: WiFi Available ✓
+    
+    Terminal->>Terminal: Collect All Day's Transactions
+    Note over Terminal: 150 transactions collected<br/>Total: ₹15,280<br/>Time period: 09:00 AM - 11:59 PM
+    
+    Terminal->>Terminal: Group by Transaction Status
+    Note over Terminal: PENDING_SETTLEMENT: 150<br/>ERROR: 2<br/>CANCELLED: 1
+    
+    Terminal->>Terminal: Create Settlement Batch
+    Note over Terminal: {<br/>MerchantID, Terminal_ID,<br/>Batch_ID (UUID),<br/>Transaction_Count: 150,<br/>Total_Amount: ₹15,280,<br/>Timestamp,<br/>Merchant_Signature (RSA-2048)<br/>}
+    
+    Terminal->>Terminal: Sign Entire Batch
+    Terminal->>Terminal: Encrypt via TLS 1.3
+    Terminal->>MBank: HTTPS POST /settlement/batch
+    Note over Terminal,MBank: Encrypted Channel (bank-provided)
+    
+    MBank->>MBank: Receive Batch (02:15 AM)
+    MBank->>MBank: Validate Merchant Signature ✓
+    MBank->>MBank: Decrypt Batch
+    MBank->>MBank: Verify Transaction Integrity
+    Note over MBank: Check: 150 transactions decoded ✓<br/>Check: All signatures present ✓<br/>Check: Amounts valid ✓
+    
+    MBank->>MBank: Create Settlement Instruction
+    Note over MBank: {<br/>Batch_ID,<br/>Transactions[],<br/>Bank_ID: MER_BANK_001,<br/>Bank_Signature,<br/>Timestamp<br/>}
+    
+    MBank->>MBank: Sign Entire Batch with Bank Key
+    MBank->>NPCI: Submit via Dedicated Channel (TLS + MPLS)
+    Note over MBank,NPCI: Encrypted, authenticated channel
+    
+    NPCI->>NPCI: Receive Batch (02:18 AM)
+    NPCI->>NPCI: Queue for Settlement
+    Note over NPCI: Settlement Cycle: Every 2 hours (12/day)<br/>Current: Queued for 02:30 AM cycle
+    
+    NPCI->>NPCI: Validate Bank Signature ✓
+    NPCI->>NPCI: Decrypt Batch
+    NPCI->>NPCI: Check for Duplicates
+    Note over NPCI: Deduplication Engine:<br/>- Compare with last 30 days of txns<br/>- Check TransactionID uniqueness<br/>- No duplicates found ✓
+    
+    NPCI->>NPCI: Validate Individual Transactions
+    Note over NPCI: For each of 150 transactions:<br/>├─ Extract: User UUID, Merchant, Amount<br/>├─ Get User Public Key from RBI<br/>├─ Verify ECDSA Signature<br/>├─ Check Timestamp (±30 sec valid)<br/>└─ All 150: VERIFIED ✓
+    
+    NPCI->>RBI: Forward to Settlement Engine (02:20 AM)
+    Note over NPCI,RBI: Settlement Request:<br/>Debit: User1(₹50), User2(₹75), ... User150(₹100)<br/>Credit: MER_TEA(₹5,280), MER_BUS(₹10,000)
+    
+    RBI->>RBI: Receive Settlement Request (02:20 AM)
+    
+    RBI->>RBI: START DATABASE TRANSACTION (Atomic)
+    
+    RBI->>RBI: Comprehensive Verification
+    Note over RBI: For each transaction:
+    
+    RBI->>RBI: 1. Verify Watch Signature
+    Note over RBI: Check ECDSA against watch cert ✓
+    
+    RBI->>RBI: 2. Check for Double-Spending
+    Note over RBI: Query: Any previous settlement for this TX? NO ✓<br/>Query: Amount ≤ balance at time? YES ✓
+    
+    RBI->>RBI: 3. Verify Timestamp Ordering
+    Note over RBI: TX should be chronological order ✓<br/>No future-dated txns ✓
+    
+    RBI->>RBI: All 150 Verified ✓
+    
+    RBI->>RBI: Create Blockchain Entry
+    Note over RBI: {<br/>Block_ID: CBDC_2026_02_21_001234,<br/>Transactions: [...150...],<br/>Merkle_Root: 0x7f8e9a...,<br/>RBI_Signature,<br/>Timestamp: 02:21 AM UTC<br/>}
+    
+    RBI->>RBI: Atomic Ledger Update
+    Note over RBI: BEGIN TRANSACTION<br/>├─ For User1: Debit ₹50<br/>├─ For User2: Debit ₹75<br/>├─ ...<br/>├─ For MER_TEA: Credit ₹5,280<br/>├─ For MER_BUS: Credit ₹10,000<br/>└─ Mark all: SETTLED ✓<br/>COMMIT TRANSACTION
+    
+    RBI->>RBI: Update Global Ledger (immutable, append-only)
+    Note over RBI: Entry now permanent, cryptographically<br/>signed, impossible to reverse
+    
+    RBI->>RBI: COMMIT DATABASE TRANSACTION
+    
+    RBI-->>NPCI: ✓ Settlement Confirmed
+    NPCI-->>MBank: ✓ Settlement Status: SETTLED
+    
+    NPCI->>UBank: Debit Instructions
+    Note over NPCI,UBank: For each user:<br/>├─ User1: Debit ₹50<br/>├─ User2: Debit ₹75<br/>└─ ... User150: Debit ₹100
+    
+    UBank->>UBank: Receive Debit Instructions (02:22 AM)
+    UBank->>UBank: Apply Debits (T+0, intra-day)
+    Note over UBank: User1 Account: ₹10,000 → ₹9,950<br/>User2 Account: ₹5,000 → ₹4,925
+    
+    NPCI->>MBank: Credit Instruction
+    Note over NPCI,MBank: Amount: ₹15,280<br/>Merchant: MER_TEA_001<br/>Transaction Detail: Batch_ID<br/>Settlement Type: IMMEDIATE
+    
+    MBank->>MBank: Receive Credit Instruction (02:23 AM)
+    MBank->>MBank: Credit Merchant Account
+    Note over MBank: Tea Merchant Account: ₹100,450 → ₹105,730<br/>Status: Funds available for withdrawal
+    
+    RBI-->>NPCI: Send Confirmation Details
+    NPCI->>Terminal: Settlement Confirmation (async)
+    Note over NPCI,Terminal: Next sync: Terminal calls for status
+    
+    Terminal->>Terminal: Poll Settlement Status
+    Terminal->>Terminal: Status: ✓ SETTLED
+    Terminal->>Merchant: Display: "Settlement Complete"
+    Note over Terminal,Merchant: Funds now in merchant bank account<br/>Can withdraw, transfer, use immediately
+    
+    Note over Terminal,UBank: SETTLEMENT COMPLETE (02:25 AM)<br/>Total Time: ~25 minutes from submission<br/>Net Settlement: ₹0 (balance achieved)
+    Note over Terminal,UBank: All 150 transactions IMMUTABLE in RBI ledger
